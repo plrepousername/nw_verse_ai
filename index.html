@@ -13,7 +13,8 @@
     <style>
         :root { --bg: #0d1117; --surface: #161b22; --primary: #238636; --text: #c9d1d9; --muted: #8b949e; --accent: #58a6ff; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; padding-bottom: 20px; }
-
+        #password-overlay h2 { color: #333; margin-bottom: 20px; }
+#pw-input:focus { outline: none; border-color: #4a6da7; }
         /* Navigation */
         nav { display: flex; background: var(--surface); border-bottom: 1px solid #30363d; position: sticky; top: 0; z-index: 100; }
         nav button { flex: 1; background: none; border: none; color: var(--muted); padding: 15px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; border-bottom: 3px solid transparent; }
@@ -56,6 +57,16 @@
     </style>
 </head>
 <body>
+
+<div id="password-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif;">
+    <h2>Test-App gesperrt</h2>
+    <input type="password" id="pw-input" placeholder="Passwort eingeben" style="padding:10px; font-size:16px; margin-bottom:10px; border:1px solid #ccc; border-radius:5px;">
+    <button onclick="checkPassword()" style="padding:10px 20px; background:#4a6da7; color:white; border:none; border-radius:5px; cursor:pointer;">Entsperren</button>
+    <p id="pw-error" style="color:red; display:none; margin-top:10px;">Falsches Passwort!</p>
+</div>
+
+<div id="app-content" style="display:none;">
+    </div>
 
     <nav>
         <button id="nav-listen" class="active-nav" onclick="showTab('listen')">📖 Bibellesen</button>
@@ -617,6 +628,34 @@ function extractReference(text) {
         document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-nav'));
         document.getElementById('nav-' + tab).classList.add('active-nav');
     }
+
+
+    function checkPassword() {
+    const input = document.getElementById('pw-input').value;
+    const errorMsg = document.getElementById('pw-error');
+
+    // HIER DEIN PASSWORT ÄNDERN
+    const geheimnis = "1914";
+
+    if (input === geheimnis) {
+        // Overlay entfernen und App zeigen
+        document.getElementById('password-overlay').style.display = 'none';
+        document.getElementById('app-content').style.display = 'block';
+
+        // Optional: Spracherkennung erst JETZT starten, falls sie automatisch losging
+        console.log("App entsperrt!");
+    } else {
+        errorMsg.style.display = 'block';
+        document.getElementById('pw-input').value = ""; // Feld leeren
+    }
+}
+
+// Ermöglicht das Drücken der "Enter"-Taste zum Entsperren
+document.getElementById('pw-input')?.addEventListener('keypress', function (e) {
+    if (e.key === 'Enter') {
+        checkPassword();
+    }
+});
 
     window.onload = init;
 </script>
