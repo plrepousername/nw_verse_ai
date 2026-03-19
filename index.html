@@ -200,12 +200,12 @@ async function loadDatabaseAndModel() {
     // Check 1: Bibel geladen?
     bibleData = await loadBibelLocally();
     console.log(bibleData);
-    if(!bibleData) {
-        console.error("DIAGNOSE: Keine Bibeldaten gefunden!");
-        statusText.innerHTML = `<span class="status-dot error"></span>Bibel fehlt!`;
-        return;
-    }
-    console.log("DIAGNOSE: Bibel-Check OK.");
+  //  if(!bibleData) {
+  //      console.error("DIAGNOSE: Keine Bibeldaten gefunden!");
+  //      statusText.innerHTML = `<span class="status-dot error"></span>Bibel fehlt!`;
+   //     return;
+   // }
+   // console.log("DIAGNOSE: Bibel-Check OK.");
 
     // Check 2: Vosk Bibliothek geladen?
     if (typeof Vosk === 'undefined') {
