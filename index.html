@@ -177,6 +177,7 @@
 
     const dbName = "BibelAppDB";
 
+
     async function init() {
         if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
         await loadDatabaseAndModel();
