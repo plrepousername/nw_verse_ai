@@ -5,7 +5,7 @@ const ASSETS = [
   '/index.html',
   '/vosk.js',
   '/manifest.json',
-  '/model.tar.gz'
+//  '/model.tar.gz'
   // Wenn du Englisch nutzt, füge hier auch '/model-en.tar.gz' hinzu
 ];
 

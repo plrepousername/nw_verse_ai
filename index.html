@@ -231,7 +231,7 @@ try {
     const currentModelFile = languages[currentLang].modelFile;
 
     // --- CACHE-KILLER HIER ---
-    const modelUrl = './' + currentModelFile + '?v=' + Date.now();
+    const modelUrl = './' + currentModelFile // + '?v=' + Date.now();
     console.log("DIAGNOSE: Erzwinge Laden von Datei:", modelUrl);
 
     // Nutze die neue modelUrl mit dem Zeitstempel
