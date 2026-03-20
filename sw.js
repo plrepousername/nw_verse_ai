@@ -6,7 +6,8 @@ const ASSETS = [
   './',
   './index.html',
   './vosk.js',
-  './manifest.json'
+  './manifest.json',
+  './bible_de.json'
 ];
 
 // 1. INSTALLATION: Core-Dateien in den Cache laden

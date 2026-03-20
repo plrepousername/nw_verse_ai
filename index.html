@@ -133,6 +133,8 @@
     const languages = {
         "de": {
             modelFile: 'model.tar.gz',
+            bibleFile: 'bible_de.json', // Deine neue Datei
+         description: 'Deutsch',
             chapterWord: 'kapitel', verseWord: 'vers',
             fillWords: ["und", "bis", "im", "der", "das"],
             numbers: {
@@ -218,15 +220,18 @@ async function loadDatabaseAndModel() {
 
     console.log("--- DIAGNOSE START ---");
 
-    // Check 1: Bibel geladen?
-    bibleData = await loadBibelLocally();
+    const langConfig = languages[currentLang];
+    console.log(langConfig.bibleFile);
+    // 1. Bibel JSON laden
+    const response = await fetch(langConfig.bibleFile);
+    bibleData = await response.json();
     console.log(bibleData);
-  //  if(!bibleData) {
-  //      console.error("DIAGNOSE: Keine Bibeldaten gefunden!");
-  //      statusText.innerHTML = `<span class="status-dot error"></span>Bibel fehlt!`;
-   //     return;
-   // }
-   // console.log("DIAGNOSE: Bibel-Check OK.");
+   if(!bibleData) {
+        console.error("DIAGNOSE: Keine Bibeldaten gefunden!");
+        statusText.innerHTML = `<span class="status-dot error"></span>Bibel fehlt!`;
+        return;
+    }
+    console.log("DIAGNOSE: Bibel-Check OK.");
 
     // Check 2: Vosk Bibliothek geladen?
     if (typeof Vosk === 'undefined') {
@@ -491,35 +496,35 @@ const zahlenWoerter = [
     "dreißig", "vierzig", "fünfzig", "sechzig", "siebzig", "achtzig", "neunzig", "hundert", "einhunderzwölf", "hundertzwölf"
 ];
 
-const buecher = [
-    // Altes Testament
-    "1. mose", "2. mose", "3. mose", "4. mose", "5. mose", "josua", "richter", "ruth",
-    "1. samuel", "2. samuel", "1. könige", "2. könige", "1. chronik", "2. chronik", "esra", "nehemia", "esther",
-    "hiob", "psalmen","psalm", "sprüche", "prediger", "hohelied", "jesaja", "jeremia", "klagelieder", "hesekiel", "daniel",
-    "hosea", "joel", "amos", "obadja", "jona", "micha", "nahum", "habakuk", "zephanja", "haggai", "sacharja", "maleachi",
-    // Neues Testament
-    "matthäus", "markus", "lukas", "johannes", "apostelgeschichte", "römer", "1. korinther", "2. korinther",
-    "galater", "epheser", "philipper", "kolosser", "1. thessalonicher", "2. thessalonicher", "1. timotheus",
-    "2. timotheus", "titus", "philemon", "hebräer", "jakobus", "1. petrus", "2. petrus", "1. johannes",
-    "2. johannes", "3. johannes", "judas", "offenbarung"
-];
+        // 2. Grammatik extrahieren
+        // Wir nehmen die Buchnamen (z.B. "1. Mose") und alle Zahlen
+        const bookNames = Object.keys(bibleData);
+        let wordsFromBooks = [];
+bookNames.forEach(book => {
+    // "1. Mose" -> ["1", "mose"]
+    const parts = book.toLowerCase().replace(/\./g, '').split(' ');
+    wordsFromBooks.push(...parts);
+});
+        console.log(bookNames);
+        const numbers = Array.from({length: 151}, (_, i) => (i).toString()); // 0 bis 150
+        const keywords = ["kapitel", "vers", "und", "bis"];
+
+        // Vosk mag keine Satzzeichen in der Grammatik-Liste (Punkt bei 1. Mose entfernen für die Erkennung)
+        const cleanGrammar = [...wordsFromBooks, ...numbers, ...zahlenWoerter, ...keywords].map(w => w.replace(".", ""));
 
 // Alles kombinieren
-const grammar = JSON.stringify([
-    ...buecher,
-    ...zahlenReihe,
-    ...zahlenWoerter,
-    "kapitel", "vers", "und"
-]);
+//const grammar = JSON.stringify([
+ //   ...buecher,
+  //  ...zahlenReihe,
+  //  ...zahlenWoerter,
+  //  "kapitel", "vers", "und"
+//]);
 
-recognizer = new model.KaldiRecognizer(16000, grammar);
-            //recognizer = new model.KaldiRecognizer(16000);
-
+recognizer = new model.KaldiRecognizer(16000,  JSON.stringify(cleanGrammar));
+console.log("Recognizer created");
           recognizer.on("partialresult", (msg) => {
             const text = msg.result?.partial || "";
             console.log("PARTIAL TEXT:", text);
-            //document.getElementById("live-text").innerText = text;
-            //verarbeiteText(text)
         });
 
         recognizer.on("result", (msg) => {
@@ -528,7 +533,6 @@ recognizer = new model.KaldiRecognizer(16000, grammar);
             console.log(msg);
 
             verarbeiteText(text);
-           // document.getElementById("live-text").innerText = text;
         });
 
             console.log(recognizer);
@@ -616,6 +620,7 @@ function extractReference(text) {
 
     // --- ANZEIGE ---
   function zeigeVersAn(buchName, kapitel, vers) {
+
     const conf = languages[currentLang];
     const buchId = conf.books[buchName.toLowerCase()]; // z.B. "42" für Lukas
 
@@ -628,14 +633,17 @@ function extractReference(text) {
     const url = `https://www.jw.org/de/bibliothek/bibel/nwt/bibelbuecher/${buchName.toLowerCase()}/${kapitel}/#v${jwId}`;
     const titel = buchName.charAt(0).toUpperCase() + buchName.slice(1);
 
+    const verseText = bibleData[buchName][kapitel][vers];
+
     // 2. Anzeige im Container (Nur Status und Link)
     document.getElementById('current-verse-container').innerHTML = `
         <div class="verse-focus">
             <h2 style="color: #4caf50;">✔ Vers gefunden</h2>
-            <p><strong>${titel} ${kapitel}:${vers}</strong></p>
-            <a href="${url}" target="_blank" class="bible-link">
-                In der Online-Bibel öffnen →
-            </a>
+            <p><strong>${titel} ${kapitel}:${vers}</strong></p><br>
+            <p class="verse-text-large">${verseText}</p>
+
+
+
         </div>
     `;
 
