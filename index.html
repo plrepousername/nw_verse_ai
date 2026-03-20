@@ -2,9 +2,9 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
     <title>Bibel-Lauscher Pro</title>
-    <link rel="manifest" href="manifest.json">
+    <link href="manifest.json" rel="manifest">
     <script src="vosk.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
@@ -57,70 +57,84 @@
 </head>
 <body>
 
-<div id="password-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif;">
+<div id="password-overlay"
+     style="position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif;">
     <h2>Test-App gesperrt</h2>
-    <input type="password" id="pw-input" placeholder="Passwort eingeben" style="padding:10px; font-size:16px; margin-bottom:10px; border:1px solid #ccc; border-radius:5px;">
-    <button onclick="checkPassword()" style="padding:10px 20px; background:#4a6da7; color:white; border:none; border-radius:5px; cursor:pointer;">Entsperren</button>
+    <input id="pw-input" placeholder="Passwort eingeben"
+           style="padding:10px; font-size:16px; margin-bottom:10px; border:1px solid #ccc; border-radius:5px;"
+           type="password">
+    <button onclick="checkPassword()"
+            style="padding:10px 20px; background:#4a6da7; color:white; border:none; border-radius:5px; cursor:pointer;">
+        Entsperren
+    </button>
     <p id="pw-error" style="color:red; display:none; margin-top:10px;">Falsches Passwort!</p>
 </div>
 
 <div id="app-content" style="display:none;">
-    </div>
+</div>
 
-    <nav>
-        <button id="nav-listen" class="active-nav" onclick="showTab('listen')">📖 Bibellesen</button>
-        <button id="nav-settings" onclick="showTab('settings')">⚙️ Einrichtung</button>
-    </nav>
+<nav>
+    <button class="active-nav" id="nav-listen" onclick="showTab('listen')">📖 Bibellesen</button>
+    <button id="nav-settings" onclick="showTab('settings')">⚙️ Einrichtung</button>
+</nav>
 
-    <div class="container">
-        <div id="tab-listen" class="tab-content active">
-            <div class="card">
-                <div class="status-bar">
-                    <span id="system-status"><span class="status-dot" id="dot-status"></span>System lädt...</span>
-                    <select id="lang-select" class="dropdown" onchange="changeLanguage()">
-                        <option value="de">🇩🇪 Deutsch</option>
-                        <option value="en">🇬🇧 English</option>
-                    </select>
-                </div>
-
-                <button id="btn-listen" class="btn-main" disabled onclick="toggleListen()">🎙️ Zuhören starten</button>
-                <div id="live-text">Warte auf Sprache...</div>
+<div class="container">
+    <div class="tab-content active" id="tab-listen">
+        <div class="card">
+            <div class="status-bar">
+                <span id="system-status"><span class="status-dot" id="dot-status"></span>System lädt...</span>
+                <select class="dropdown" id="lang-select" onchange="changeLanguage()">
+                    <option value="de">🇩🇪 Deutsch</option>
+                    <option value="en">🇬🇧 English</option>
+                </select>
             </div>
 
-            <div id="current-verse-container"></div>
-            <div id="history-container"></div>
+            <button class="btn-main" disabled id="btn-listen" onclick="toggleListen()">🎙️ Zuhören starten</button>
+            <div id="live-text">Warte auf Sprache...</div>
         </div>
 
-        <div id="tab-settings" class="tab-content">
-            <div class="card">
-                <h2 style="margin-top:0; color: var(--text);">Bibel importieren</h2>
-                <p style="color: var(--muted); margin-bottom: 20px;">Die Bibel-Texte werden sicher und direkt auf Ihrem Gerät gespeichert. Es ist keine Internetverbindung mehr nötig.</p>
+        <div id="current-verse-container"></div>
+        <div id="history-container"></div>
+    </div>
 
-                <div class="step-box">
-                    <h3 style="margin-top:0; color: var(--accent);">Schritt 1: Herunterladen</h3>
-                    <p>Öffnen Sie die offizielle Seite und laden Sie die Bibel im Format <b>"JWPUB"</b> herunter.</p>
-                    <button class="btn-main" style="background: #30363d;" onclick="openJwDownload()">🌐 jw.org Download öffnen</button>
-                </div>
+    <div class="tab-content" id="tab-settings">
+        <div class="card">
+            <h2 style="margin-top:0; color: var(--text);">Bibel importieren</h2>
+            <p style="color: var(--muted); margin-bottom: 20px;">Die Bibel-Texte werden sicher und direkt auf Ihrem
+                Gerät gespeichert. Es ist keine Internetverbindung mehr nötig.</p>
 
-                <div class="step-box">
-                    <h3 style="margin-top:0; color: var(--accent);">Schritt 2: Auswählen</h3>
-                    <p>Wählen Sie nun die heruntergeladene Datei aus.</p>
-                    <button class="btn-main" style="background: var(--text); color: var(--bg);" onclick="document.getElementById('file-input').click()">📂 Datei auswählen</button>
-                    <input type="file" id="file-input" accept=".jwpub" style="display:none" onchange="importJwpub(this.files[0])">
-                    <div id="import-status" style="margin-top: 15px; font-weight: bold; text-align: center; color: var(--primary);"></div>
-                </div>
+            <div class="step-box">
+                <h3 style="margin-top:0; color: var(--accent);">Schritt 1: Herunterladen</h3>
+                <p>Öffnen Sie die offizielle Seite und laden Sie die Bibel im Format <b>"JWPUB"</b> herunter.</p>
+                <button class="btn-main" onclick="openJwDownload()" style="background: #30363d;">🌐 jw.org Download
+                    öffnen
+                </button>
             </div>
 
-            <div class="card info-box">
-                <h4 style="margin-top:0; color: var(--accent);">📲 App Offline installieren</h4>
-                <p style="margin-bottom:0; font-size:0.95rem;">Fügen Sie diese Seite zu Ihrem <b>Startbildschirm (Homescreen)</b> hinzu. Dann funktioniert sie wie eine echte App komplett ohne Internet.</p>
+            <div class="step-box">
+                <h3 style="margin-top:0; color: var(--accent);">Schritt 2: Auswählen</h3>
+                <p>Wählen Sie nun die heruntergeladene Datei aus.</p>
+                <button class="btn-main" onclick="document.getElementById('file-input').click()"
+                        style="background: var(--text); color: var(--bg);">📂 Datei auswählen
+                </button>
+                <input accept=".jwpub" id="file-input" onchange="importJwpub(this.files[0])" style="display:none"
+                       type="file">
+                <div id="import-status"
+                     style="margin-top: 15px; font-weight: bold; text-align: center; color: var(--primary);"></div>
             </div>
         </div>
+
+        <div class="card info-box">
+            <h4 style="margin-top:0; color: var(--accent);">📲 App Offline installieren</h4>
+            <p style="margin-bottom:0; font-size:0.95rem;">Fügen Sie diese Seite zu Ihrem <b>Startbildschirm
+                (Homescreen)</b> hinzu. Dann funktioniert sie wie eine echte App komplett ohne Internet.</p>
+        </div>
     </div>
+</div>
 
 <script>
     let model, recognizer, audioContext;
-
+    let verseHistory = [];
     let isListening = false;
     let bibleData = null;
     let currentVerseData = null;
@@ -128,6 +142,21 @@
 
 
 
+const wordCorrections = {
+    "amos": ["arm los"],
+    "obadja": ["opa ja"],
+    "nahum": ["na um"],
+    "jona": ["jonas"],
+    "nehemia": ["nehmen mir"],
+    "sacharja": ["sache ja"],
+    "zephanja": ["seefahrer"],
+    "maleachi": ["maler"],
+    "chronika": ["krone"],
+    "korinther": ["korinth"],
+    "thessalonicher": ["thessaloniki"],
+    "philemon": ["film mond"],
+    "timotheus": ["timo bus"]
+};
 
     // SPRACH-KONFIGURATION
     const languages = {
@@ -205,6 +234,27 @@ async function init() {
         }
     }
     await loadDatabaseAndModel();
+}
+
+function updateHistory() {
+    const container = document.getElementById('history-container');
+    if (!container) return;
+
+    container.innerHTML = "";
+
+    verseHistory.forEach((v, index) => {
+        const isNewest = index === 0;
+
+        const div = document.createElement("div");
+        div.className = "verse-history-item" + (isNewest ? " newest" : "");
+
+        div.innerHTML = `
+            <h4>${v.title}</h4>
+            <p>${v.text}</p>
+        `;
+
+        container.appendChild(div);
+    });
 }
 
 async function loadDatabaseAndModel() {
@@ -452,9 +502,35 @@ function normalizeText(text) {
 }
 
 
+function applyWordCorrections(resultText, wordCorrections) {
+    let text = resultText.toLowerCase();
 
+    for (const [correctWord, variants] of Object.entries(wordCorrections)) {
+        for (const variant of variants) {
+            const regex = new RegExp(`\\b${variant}\\b`, "gi");
+            text = text.replace(regex, correctWord);
+        }
+    }
 
+    return text;
+}
 
+function applyWordCorrectionsToWords(words, wordCorrections) {
+    return words.map(w => {
+        const wordLower = w.word.toLowerCase();
+
+        for (const [correct, variants] of Object.entries(wordCorrections)) {
+            if (variants.includes(wordLower)) {
+                return {
+                    ...w,
+                    word: correct
+                };
+            }
+        }
+
+        return w;
+    });
+}
 
     // --- SPRACHERKENNUNG ---
   async function toggleListen() {
@@ -490,13 +566,17 @@ function normalizeText(text) {
       if (!recognizer) {
             console.log("Erstelle Recognizer...");
             // Hilfsfunktion, um Zahlen von 1 bis 150 schnell zu generieren
-const zahlenReihe = Array.from({length: 150}, (_, i) => (i + 1).toString());
+//const zahlenReihe = Array.from({length: 150}, (_, i) => (i + 1).toString());
 const zahlenWoerter = [
-"erste","zweite","dritte","vierte","fünfte",
+    "erste","zweite","dritte","vierte","fünfte",
     "eins", "zwei", "drei", "vier", "fünf", "sechs", "sieben", "acht", "neun", "zehn",
     "elf", "zwölf", "dreizehn", "vierzehn", "fünfzehn", "sechzehn", "siebzehn", "achtzehn", "neunzehn", "zwanzig",
-    "dreißig", "vierzig", "fünfzig", "sechzig", "siebzig", "achtzig", "neunzig", "hundert", "einhundertzwölf", "hundertzwölf"
+    "einundzwanzig","zweiundzwanzig","dreiundzwanzig","vierundzwanzig","fünfundzwanzig","sechsundzwanzig",
+    "siebenundzwanzig", "achtundzwanzig", "neunundzwanzig",
+    "dreißig", "vierzig", "fünfzig", "sechzig", "siebzig", "achtzig", "neunzig", "hundert", "einhundertundzwölf", "hundertundzwölf"
 ];
+
+
 
         // 2. Grammatik extrahieren
         // Wir nehmen die Buchnamen (z.B. "1. Mose") und alle Zahlen
@@ -509,11 +589,15 @@ bookNames.forEach(book => {
 });
         console.log(bookNames);
         const numbers = Array.from({length: 151}, (_, i) => (i).toString()); // 0 bis 150
-        const keywords = ["kapitel", "vers", "und", "bis"];
+        const keywords = ["kapitel", "vers", "und","lesen", "aufschlagen","öffnen", "bis","buch","bibel","wir","bitte","gemeinsam"];
 
         // Vosk mag keine Satzzeichen in der Grammatik-Liste (Punkt bei 1. Mose entfernen für die Erkennung)
-        const cleanGrammar = [...wordsFromBooks, ...numbers, ...zahlenWoerter, ...keywords].map(w => w.replace(".", ""));
+        const cleanGrammar = [...wordsFromBooks, ...zahlenWoerter, ...keywords].map(w => w.replace(".", ""));
         cleanGrammar.push("[unk]");
+
+        for (const variants of Object.values(wordCorrections)) {
+    cleanGrammar.push(...variants);
+}
 // Alles kombinieren
 //const grammar = JSON.stringify([
  //   ...buecher,
@@ -535,35 +619,37 @@ console.log("Recognizer created");
            // console.log(msg);
         });
 
-        recognizer.on("result", (msg) => {
+      recognizer.on("result", (msg) => {
 
-               const data = msg.result;
+    const data = msg.result;
 
+    if (!data.result || data.result.length === 0) {
+        console.log("Keine Wörter erkannt (leise/null)");
+        return;
+    }
 
-              if (!data.result || data.result.length === 0) {
-                console.log("Keine Wörter erkannt (leise/null)");
-                return;
-              }
+    let words = data.result || [];
 
-              const words = data.result || [];
+    // 🔥 Wortkorrektur anwenden
+    words = applyWordCorrectionsToWords(words, wordCorrections);
 
-              console.log("Volltext:", data.text);
+    console.log("Volltext:", data.text);
 
-              words.forEach((wort, index) => {
-             console.log(`Wort ${index + 1}: "${wort.word}" | Conf:
-      ${wort.conf.toFixed(3)}`);
-  });
+    words.forEach((wort, index) => {
+        console.log(`Wort ${index + 1}: "${wort.word}" | Conf: ${wort.conf.toFixed(3)}`);
+    });
 
+    // ✅ Danach filtern
+    const guteWoerter = words.filter(w => w.conf >= 0.8);
 
+    const filteredText = guteWoerter.map(w => w.word).join(' ');
 
-            const guteWoerter = words.filter(w => w.conf >= 0.8);
+    // 🔥 Jetzt ist der Text bereits korrigiert
+    verarbeiteText(filteredText);
+});
 
-        const filteredText = guteWoerter.map(w => w.word).join(' ');
-            verarbeiteText(filteredText);
-        });
-
-            console.log(recognizer);
-        }
+console.log(recognizer);
+}
 
         source = audioContext.createMediaStreamSource(stream);
         // ScriptProcessor für maximale Kompatibilität
@@ -671,14 +757,30 @@ function extractReference(text) {
             <h2 style="color: #4caf50;">✔ Vers gefunden</h2>
             <p><strong>${titel} ${kapitel}:${vers}</strong></p><br>
             <p class="verse-text-large">${verseText}</p>
-
-
-
         </div>
     `;
 
     // 3. Optional: Vibration bei Erfolg
     if (navigator.vibrate) navigator.vibrate(50);
+
+    // --- HISTORY SPEICHERN ---
+
+const eintrag = {
+    title: `${titel} ${kapitel}:${vers}`,
+    text: verseText
+};
+
+// Doppelten direkten Treffer vermeiden
+if (!verseHistory.length || verseHistory[0].title !== eintrag.title) {
+    verseHistory.unshift(eintrag); // nach oben
+
+    // nur letzte 10 behalten
+    if (verseHistory.length > 10) {
+        verseHistory = verseHistory.slice(0, 10);
+    }
+}
+
+updateHistory();
 }
 
     // --- UI HELFER ---
