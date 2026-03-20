@@ -8,5 +8,5 @@ class VoskServer(SimpleHTTPRequestHandler):
         super().end_headers()
 
 print("Bibel-Lauscher Server gestartet!")
-print("Öffne: http://localhost:8000")
+print("Öffne: http://localhost:8001")
 HTTPServer(('localhost', 8001), VoskServer).serve_forever()

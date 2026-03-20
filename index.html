@@ -176,11 +176,28 @@
 
     const dbName = "BibelAppDB";
 
+async function init() {
+    if ('serviceWorker' in navigator) {
+        try {
+            const reg = await navigator.serviceWorker.register('sw.js');
 
-    async function init() {
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-        await loadDatabaseAndModel();
+            // Wenn SharedArrayBuffer fehlt, warten wir auf den SW und laden neu!
+            if (!window.SharedArrayBuffer) {
+                console.warn("Warte auf Service Worker für Security Header (COOP/COEP)...");
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    console.log("Service Worker aktiv. Lade Seite neu für SharedArrayBuffer...");
+                    window.location.reload();
+                });
+                return; // Breche hier ab, damit Vosk nicht abstürzt. Der Reload übernimmt gleich.
+            }
+        } catch(e) {
+            console.error("Service Worker Fehler:", e);
+        }
     }
+
+    // Wird nur ausgeführt, wenn der SharedArrayBuffer (nach dem Reload) verfügbar ist
+    await loadDatabaseAndModel();
+}
 
 
 async function loadDatabaseAndModel() {
@@ -230,7 +247,7 @@ try {
     const currentModelFile = languages[currentLang].modelFile;
 
     // --- CACHE-KILLER HIER ---
-    const modelUrl = './' + currentModelFile // + '?v=' + Date.now();
+    const modelUrl = currentModelFile // + '?v=' + Date.now();
     console.log("DIAGNOSE: Erzwinge Laden von Datei:", modelUrl);
 
     // Nutze die neue modelUrl mit dem Zeitstempel
