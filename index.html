@@ -432,6 +432,7 @@ function normalizeText(text) {
 }
 
   function verarbeiteText(text) {
+   if (!text || text.length === 0) return;
     document.getElementById('live-text').innerText = text;
 
     let normalized = normalizeText(text);
@@ -511,7 +512,7 @@ bookNames.forEach(book => {
 
         // Vosk mag keine Satzzeichen in der Grammatik-Liste (Punkt bei 1. Mose entfernen für die Erkennung)
         const cleanGrammar = [...wordsFromBooks, ...numbers, ...zahlenWoerter, ...keywords].map(w => w.replace(".", ""));
-
+        cleanGrammar.push("[unk]");
 // Alles kombinieren
 //const grammar = JSON.stringify([
  //   ...buecher,
@@ -520,19 +521,44 @@ bookNames.forEach(book => {
   //  "kapitel", "vers", "und"
 //]);
 
+//const grammarString = `#JSGF V1.0;\ngrammar bibel;\npublic <buch> = ${cleanGrammar.join(' | ')};`;
+//recognizer = new model.KaldiRecognizer(16000,  grammarString);
+
+
 recognizer = new model.KaldiRecognizer(16000,  JSON.stringify(cleanGrammar));
+recognizer.setWords(true);
 console.log("Recognizer created");
           recognizer.on("partialresult", (msg) => {
             const text = msg.result?.partial || "";
-            console.log("PARTIAL TEXT:", text);
+           // console.log("PARTIAL TEXT:", text);
+           // console.log(msg);
         });
 
         recognizer.on("result", (msg) => {
-            const text = msg.result?.text || "";
-            console.log("FINAL TEXT:", text);
-            console.log(msg);
 
-            verarbeiteText(text);
+               const data = msg.result;
+
+
+              if (!data.result || data.result.length === 0) {
+                console.log("Keine Wörter erkannt (leise/null)");
+                return;
+              }
+
+              const words = data.result || [];
+
+              console.log("Volltext:", data.text);
+
+              words.forEach((wort, index) => {
+             console.log(`Wort ${index + 1}: "${wort.word}" | Conf:
+      ${wort.conf.toFixed(3)}`);
+  });
+
+
+
+            const guteWoerter = words.filter(w => w.conf >= 0.8);
+
+        const filteredText = guteWoerter.map(w => w.word).join(' ');
+            verarbeiteText(filteredText);
         });
 
             console.log(recognizer);
@@ -632,7 +658,10 @@ function extractReference(text) {
 
     const url = `https://www.jw.org/de/bibliothek/bibel/nwt/bibelbuecher/${buchName.toLowerCase()}/${kapitel}/#v${jwId}`;
     const titel = buchName.charAt(0).toUpperCase() + buchName.slice(1);
-
+    console.log(buchName);
+    console.log(kapitel);
+    console.log(vers);
+    console.log( bibleData[buchName]);
     const verseText = bibleData[buchName][kapitel][vers];
 
     // 2. Anzeige im Container (Nur Status und Link)
