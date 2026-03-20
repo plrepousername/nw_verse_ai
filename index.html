@@ -246,13 +246,13 @@ async function loadDatabaseAndModel() {
 try {
     const currentModelFile = languages[currentLang].modelFile;
 
-    // --- CACHE-KILLER HIER ---
-    const modelUrl = currentModelFile // + '?v=' + Date.now();
+    // Erzeugt die absolut korrekte URL (z.B. https://deinname.github.io/nw_verse_ai/model.tar.gz)
+    const modelUrl = new URL(currentModelFile, window.location.href).href;
+
     console.log("DIAGNOSE: Erzwinge Laden von Datei:", modelUrl);
 
-    // Nutze die neue modelUrl mit dem Zeitstempel
+    // Nutze die absolute URL
     model = await Vosk.createModel(modelUrl);
-    // -------------------------
 
     console.log("DIAGNOSE: MODELL GELADEN!");
     dot.className = "status-dot ready";
