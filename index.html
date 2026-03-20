@@ -175,30 +175,35 @@
     };
 
     const dbName = "BibelAppDB";
-
 async function init() {
     if ('serviceWorker' in navigator) {
-        try {
-            const reg = await navigator.serviceWorker.register('sw.js');
+        const reg = await navigator.serviceWorker.register('sw.js');
 
-            // Wenn SharedArrayBuffer fehlt, warten wir auf den SW und laden neu!
-            if (!window.SharedArrayBuffer) {
-                console.warn("Warte auf Service Worker für Security Header (COOP/COEP)...");
-                navigator.serviceWorker.addEventListener('controllerchange', () => {
-                    console.log("Service Worker aktiv. Lade Seite neu für SharedArrayBuffer...");
-                    window.location.reload();
-                });
-                return; // Breche hier ab, damit Vosk nicht abstürzt. Der Reload übernimmt gleich.
+        // Wenn wir SAB noch nicht haben, müssen wir den SW scharf schalten
+        if (!window.SharedArrayBuffer) {
+            console.warn("SAB fehlt. Aktiviere Service Worker...");
+
+            // Falls schon ein SW wartet, aktivieren wir ihn sofort
+            if (reg.waiting) {
+                reg.waiting.postMessage({ type: 'SKIP_WAITING' });
             }
-        } catch(e) {
-            console.error("Service Worker Fehler:", e);
+
+            // Sobald ein neuer SW die Kontrolle übernimmt -> Reload
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                window.location.reload();
+            });
+
+            // Falls der SW schon aktiv ist, aber die Seite beim ersten Laden
+            // noch nicht "intercepted" hat, hilft ein manueller Reload nach 1 Sekunde
+            setTimeout(() => {
+                if (!window.SharedArrayBuffer) window.location.reload();
+            }, 2000);
+
+            return;
         }
     }
-
-    // Wird nur ausgeführt, wenn der SharedArrayBuffer (nach dem Reload) verfügbar ist
     await loadDatabaseAndModel();
 }
-
 
 async function loadDatabaseAndModel() {
 

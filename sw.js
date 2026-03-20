@@ -22,7 +22,9 @@ self.addEventListener('install', (event) => {
 
 // 2. AKTIVIERUNG: Alten Cache löschen, falls vorhanden
 self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
+  // WICHTIG: Übernimmt sofort die Kontrolle über alle offenen Tabs
+  event.waitUntil(self.clients.claim());
+
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
