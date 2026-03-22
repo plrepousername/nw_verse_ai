@@ -151,9 +151,11 @@ const wordCorrections = {
     "sacharja": ["sache ja"],
     "zephanja": ["seefahrer"],
     "maleachi": ["maler"],
-    "chronika": ["krone"],
-    "korinther": ["korinth"],
-    "thessalonicher": ["thessaloniki"],
+    "chronika": ["chroniker"],
+    "1 korinther": ["erster korinth"],
+    "2 korinther": ["zweiter korinth"],
+    "1 thessalonicher": ["erster thessaloniki"],
+    "2 thessalonicher": ["zweiter thessaloniki"],
     "philemon": ["film mond"],
     "timotheus": ["timo bus"]
 };
@@ -514,22 +516,48 @@ function applyWordCorrections(resultText, wordCorrections) {
 
     return text;
 }
-
 function applyWordCorrectionsToWords(words, wordCorrections) {
-    return words.map(w => {
-        const wordLower = w.word.toLowerCase();
+console.log("new");
+    let result = [];
+
+    for (let i = 0; i < words.length; i++) {
+        let current = words[i].word.toLowerCase();
+        let next = words[i + 1]?.word.toLowerCase();
+
+        let combined = next ? current + " " + next : current;
+
+        let replaced = false;
 
         for (const [correct, variants] of Object.entries(wordCorrections)) {
-            if (variants.includes(wordLower)) {
-                return {
-                    ...w,
+
+            // 🔥 1. Mehrwort prüfen (z.B. "opa ja")
+            if (variants.includes(combined)) {
+                result.push({
+                    ...words[i],
                     word: correct
-                };
+                });
+                i++; // nächstes Wort überspringen!
+                replaced = true;
+                break;
+            }
+
+            // 🔥 2. Einzelwort prüfen
+            if (variants.includes(current)) {
+                result.push({
+                    ...words[i],
+                    word: correct
+                });
+                replaced = true;
+                break;
             }
         }
 
-        return w;
-    });
+        if (!replaced) {
+            result.push(words[i]);
+        }
+    }
+
+    return result;
 }
 
     // --- SPRACHERKENNUNG ---

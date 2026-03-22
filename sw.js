@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bibel-lauscher-pro-v7';
+const CACHE_NAME = 'bibel-lauscher-pro-v7_2';
 
 // Nur die absolut notwendigen Dateien für den Start cachen.
 // WICHTIG: Nutze relative Pfade './', damit es auf GitHub Pages im Unterordner läuft!
