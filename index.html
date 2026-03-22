@@ -139,7 +139,7 @@
     let bibleData = null;
     let currentVerseData = null;
     let currentLang = 'de';
-
+    let alleWoerter = [];
 
 
 const wordCorrections = {
@@ -159,6 +159,8 @@ const wordCorrections = {
     "philemon": ["film mond"],
     "timotheus": ["timo bus"]
 };
+
+
 
     // SPRACH-KONFIGURATION
     const languages = {
@@ -604,7 +606,14 @@ const zahlenWoerter = [
     "dreißig", "vierzig", "fünfzig", "sechzig", "siebzig", "achtzig", "neunzig", "hundert", "einhundertundzwölf", "hundertundzwölf"
 ];
 
+fetch("data/de/de_vokabular.json")
+  .then(response => response.json())
+  .then(json => {
+    // 2. alle Wörter in ein einfaches Array umwandeln
+    alleWoerter = Object.values(json).flat();
 
+
+console.log(alleWoerter);
 
         // 2. Grammatik extrahieren
         // Wir nehmen die Buchnamen (z.B. "1. Mose") und alle Zahlen
@@ -620,7 +629,7 @@ bookNames.forEach(book => {
         const keywords = ["kapitel", "vers", "und","lesen", "aufschlagen","öffnen", "bis","buch","bibel","wir","bitte","gemeinsam"];
 
         // Vosk mag keine Satzzeichen in der Grammatik-Liste (Punkt bei 1. Mose entfernen für die Erkennung)
-        const cleanGrammar = [...wordsFromBooks, ...zahlenWoerter, ...keywords].map(w => w.replace(".", ""));
+        const cleanGrammar = [...wordsFromBooks, ...zahlenWoerter, ...keywords, ...alleWoerter].map(w => w.replace(".", ""));
         cleanGrammar.push("[unk]");
 
         for (const variants of Object.values(wordCorrections)) {
@@ -674,6 +683,9 @@ console.log("Recognizer created");
 
     // 🔥 Jetzt ist der Text bereits korrigiert
     verarbeiteText(filteredText);
+
+      })
+  .catch(error => console.error("Fehler beim Laden der JSON‑Datei:", error));
 });
 
 console.log(recognizer);
@@ -710,52 +722,90 @@ console.log(recognizer);
 
 
 
-
 function extractReference(text) {
     const conf = languages[currentLang];
+    const textLower = text.toLowerCase();
 
-    let book = null;
-    let chapter = null;
-    let verse = null;
-    console.log(text);
-    // 1. Buch finden
-    for (const b of Object.keys(conf.books)) {
-        if (text.includes(b)) {
-            console.log("erkannt");
-            console.log(b);
-            book = b;
-            break;
+    // 1. Alle Buchvorkommen finden (mit Position)
+    let foundBooks = [];
+    for (const bookName of Object.keys(conf.books)) {
+        const bookLower = bookName.toLowerCase();
+        let pos = textLower.indexOf(bookLower);
+        while (pos !== -1) {
+            foundBooks.push({ name: bookName, index: pos, length: bookLower.length });
+            pos = textLower.indexOf(bookLower, pos + 1);
         }
     }
 
-    if (!book) return null;
+    if (foundBooks.length === 0) return null;
 
-
-    // 2. Zahlen extrahieren (alle)
-    const numbers = text.match(/\d+/g);
-    console.log(numbers);
-    //if (!numbers) return null;
-
-    // 3. Kontext: vers / kapitel erkennen
-    if (text.includes("vers")) {
-        verse = numbers.pop();
+    // 2. Alle Zahlen finden (mit Position)
+    const numberMatches = [];
+    const numRegex = /\d+/g;
+    let m;
+    while ((m = numRegex.exec(textLower)) !== null) {
+        numberMatches.push({ value: m[0], index: m.index });
     }
 
-    if (text.includes("kapitel")) {
-        // erstes oder zweites Zahlvorkommen = Kapitel
-        chapter = numbers[0];
+    if (numberMatches.length === 0) return null;
+
+    // 3. Das "Anker-Buch" bestimmen
+    // Wir suchen das Buch, das am dichtesten VOR der ersten Zahl steht
+    const firstNumIndex = numberMatches[0].index;
+    let bestBook = foundBooks[0];
+    let minDistance = Infinity;
+
+    for (const b of foundBooks) {
+        // Distanz: Buch muss vor der Zahl stehen, oder nur knapp danach
+        const distance = firstNumIndex - (b.index + b.length);
+        if (distance >= -5 && distance < minDistance) {
+            minDistance = distance;
+            bestBook = b;
+        }
     }
 
-    // Fallback
-    if (!chapter && numbers.length > 0) {
-        chapter = numbers[0];
+    // 4. Den Text ab dem gewählten Buch analysieren
+    const relevantPart = textLower.substring(bestBook.index + bestBook.length);
+    const relevantNumbers = relevantPart.match(/\d+/g) || [];
+
+    let chapter = null;
+    let verse = null;
+
+    // 5. Explizite Zuordnung (Vermeidung von Doppelnutzung derselben Zahl)
+    const chapterMatch = relevantPart.match(/kapitel\s+(\d+)/);
+    const verseMatch = relevantPart.match(/vers\s+(\d+)/);
+
+    if (chapterMatch) {
+        chapter = chapterMatch[1];
+    }
+    if (verseMatch) {
+        verse = verseMatch[1];
     }
 
-    if (!verse && numbers.length > 1) {
-        verse = numbers[1];
+    // Fallback: Nur wenn noch nicht durch Keywords belegt
+    if (!chapter && relevantNumbers.length > 0) {
+        chapter = relevantNumbers[0];
     }
 
-    return { book, chapter, verse };
+    // WICHTIG: Vers darf nur gesetzt werden, wenn es wirklich eine ZWEITE Zahl gibt
+    // oder das Wort "vers" explizit davor stand.
+    if (!verse && relevantNumbers.length > 1) {
+        // Wenn die erste Zahl als Kapitel verbraucht wurde, nimm die zweite
+        verse = (relevantNumbers[0] === chapter) ? relevantNumbers[1] : relevantNumbers[0];
+    } else if (!verse && verseMatch) {
+        verse = verseMatch[1];
+    }
+
+    // Validierung: Wenn Kapitel und Vers gleich sind, aber nur eine Zahl im Text steht -> Fehler korrigieren
+    if (chapter === verse && !verseMatch && relevantNumbers.length === 1) {
+        verse = null;
+    }
+
+    return {
+        book: bestBook.name,
+        chapter: chapter,
+        verse: verse
+    };
 }
 
 

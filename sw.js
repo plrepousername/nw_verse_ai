@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bibel-lauscher-pro-v7_2';
+const CACHE_NAME = 'bibel-lauscher-pro-v7_3';
 
 // Nur die absolut notwendigen Dateien für den Start cachen.
 // WICHTIG: Nutze relative Pfade './', damit es auf GitHub Pages im Unterordner läuft!
@@ -8,7 +8,8 @@ const ASSETS = [
   './vosk.js',
   './manifest.json',
   './bible_de.json',
-  './model.tar.gz'
+  './model.tar.gz',
+  './data/de/de_vokabular.json'
 ];
 
 // 1. INSTALLATION: Core-Dateien in den Cache laden
