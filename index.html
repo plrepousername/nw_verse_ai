@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
     <title>Bibel-Lauscher Pro</title>
+    <!-- Dummy Favicon, um den 404-Fehler im Log zu unterdrücken -->
+    <link rel="icon" href="data:,">
     <link href="manifest.json" rel="manifest">
     <script src="vosk.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -11,9 +13,10 @@
 
     <style>
         :root { --bg: #0d1117; --surface: #161b22; --primary: #238636; --text: #c9d1d9; --muted: #8b949e; --accent: #58a6ff; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; padding-bottom: 20px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; padding-bottom: 20px; overflow-x: hidden; }
         #password-overlay h2 { color: #333; margin-bottom: 20px; }
-#pw-input:focus { outline: none; border-color: #4a6da7; }
+        #pw-input:focus { outline: none; border-color: #4a6da7; }
+
         /* Navigation */
         nav { display: flex; background: var(--surface); border-bottom: 1px solid #30363d; position: sticky; top: 0; z-index: 100; }
         nav button { flex: 1; background: none; border: none; color: var(--muted); padding: 15px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; border-bottom: 3px solid transparent; }
@@ -39,13 +42,22 @@
 
         #live-text { color: var(--muted); font-style: italic; margin-top: 15px; min-height: 1.5em; font-size: 1.1rem; text-align: center; }
 
-        /* Vers-Anzeige (Groß für den Saal) */
-        .verse-focus { background: rgba(35, 134, 54, 0.1); border-left: 5px solid var(--primary); padding: 25px; border-radius: 12px; animation: fadeIn 0.4s ease-out; margin-bottom: 20px; }
+        /* Vers-Anzeige */
+        .verse-focus { background: rgba(35, 134, 54, 0.1); border-left: 5px solid var(--primary); padding: 25px; border-radius: 12px; animation: fadeIn 0.4s ease-out; margin-bottom: 20px; position: relative; transition: transform 0.3s ease, opacity 0.3s ease; }
         .verse-focus h2 { margin: 0 0 15px 0; color: var(--accent); font-size: 2rem; }
         .verse-focus p { margin: 0; font-size: 1.5rem; line-height: 1.6; color: #fff; }
 
+        /* Kapitel-Kontext Ansicht */
+        .btn-context { background: transparent; color: var(--accent); border: 1px solid var(--accent); padding: 10px; border-radius: 8px; margin-top: 20px; cursor: pointer; width: 100%; font-size: 1rem; transition: 0.2s; }
+        .btn-context:hover { background: rgba(88, 166, 255, 0.1); }
+        .chapter-scroll-container { max-height: 50vh; overflow-y: auto; background: var(--bg); padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px solid #30363d; }
+        .context-verse { color: var(--muted); font-size: 1.2rem !important; margin-bottom: 10px !important; }
+        .highlighted-verse { color: #fff !important; font-weight: bold; background: rgba(35, 134, 54, 0.2); padding: 8px; border-radius: 6px; border-left: 3px solid var(--primary); }
+        .vers-num { color: var(--accent); font-size: 0.7em; margin-right: 5px; vertical-align: super; }
+
         /* Historie */
-        .verse-history-item { background: var(--surface); border: 1px solid #30363d; padding: 15px; border-radius: 8px; margin-bottom: 10px; opacity: 0.8; }
+        .verse-history-item { background: var(--surface); border: 1px solid #30363d; padding: 15px; border-radius: 8px; margin-bottom: 10px; opacity: 0.8; cursor: pointer; transition: 0.2s; }
+        .verse-history-item:hover { background: #21262d; border-color: var(--accent); opacity: 1; transform: translateX(5px); }
         .verse-history-item h4 { margin: 0 0 8px 0; color: var(--muted); font-size: 1.1rem; }
         .verse-history-item p { margin: 0; font-size: 1.1rem; line-height: 1.5; }
 
@@ -100,50 +112,45 @@
     <div class="tab-content" id="tab-settings">
         <div class="card">
             <h2 style="margin-top:0; color: var(--text);">Bibel importieren</h2>
-            <p style="color: var(--muted); margin-bottom: 20px;">Die Bibel-Texte werden sicher und direkt auf Ihrem
-                Gerät gespeichert. Es ist keine Internetverbindung mehr nötig.</p>
+            <p style="color: var(--muted); margin-bottom: 20px;">Die Bibel-Texte werden sicher und direkt auf Ihrem Gerät gespeichert. Es ist keine Internetverbindung mehr nötig.</p>
 
             <div class="step-box">
                 <h3 style="margin-top:0; color: var(--accent);">Schritt 1: Herunterladen</h3>
                 <p>Öffnen Sie die offizielle Seite und laden Sie die Bibel im Format <b>"JWPUB"</b> herunter.</p>
-                <button class="btn-main" onclick="openJwDownload()" style="background: #30363d;">🌐 jw.org Download
-                    öffnen
-                </button>
+                <button class="btn-main" onclick="openJwDownload()" style="background: #30363d;">🌐 jw.org Download öffnen</button>
             </div>
 
             <div class="step-box">
                 <h3 style="margin-top:0; color: var(--accent);">Schritt 2: Auswählen</h3>
                 <p>Wählen Sie nun die heruntergeladene Datei aus.</p>
-                <button class="btn-main" onclick="document.getElementById('file-input').click()"
-                        style="background: var(--text); color: var(--bg);">📂 Datei auswählen
-                </button>
-                <input accept=".jwpub" id="file-input" onchange="importJwpub(this.files[0])" style="display:none"
-                       type="file">
-                <div id="import-status"
-                     style="margin-top: 15px; font-weight: bold; text-align: center; color: var(--primary);"></div>
+                <button class="btn-main" onclick="document.getElementById('file-input').click()" style="background: var(--text); color: var(--bg);">📂 Datei auswählen</button>
+                <input accept=".jwpub" id="file-input" onchange="importJwpub(this.files[0])" style="display:none" type="file">
+                <div id="import-status" style="margin-top: 15px; font-weight: bold; text-align: center; color: var(--primary);"></div>
             </div>
         </div>
 
         <div class="card info-box">
             <h4 style="margin-top:0; color: var(--accent);">📲 App Offline installieren</h4>
-            <p style="margin-bottom:0; font-size:0.95rem;">Fügen Sie diese Seite zu Ihrem <b>Startbildschirm
-                (Homescreen)</b> hinzu. Dann funktioniert sie wie eine echte App komplett ohne Internet.</p>
+            <p style="margin-bottom:0; font-size:0.95rem;">Fügen Sie diese Seite zu Ihrem <b>Startbildschirm (Homescreen)</b> hinzu. Dann funktioniert sie wie eine echte App komplett ohne Internet.</p>
         </div>
     </div>
 </div>
 
 <script>
 
-    let model, recognizer, audioContext;
+    let model, recognizer, audioContext, processor, source;
+
+    // Getrennte Verwaltung von aktuellem Vers und Historie
+    let currentVerse = null;
     let verseHistory = [];
+
     let isListening = false;
     let bibleData = null;
-    let currentVerseData = null;
     let currentLang = 'de';
     let alleWoerter = [];
 
- let numberMap = {};
-let numberKeys = [];
+    let numberMap = {};
+    let numberKeys = [];
 
 /* =========================
    1. ZAHLEN LADEN
@@ -152,33 +159,21 @@ fetch("./data/de/zahlen.json")
     .then(r => r.json())
     .then(json => {
         numberMap = json;
-
-        numberKeys = Object.keys(numberMap)
-            .sort((a, b) => b.length - a.length);
-
+        numberKeys = Object.keys(numberMap).sort((a, b) => b.length - a.length);
         console.log("✅ Zahlen geladen:", numberKeys.length);
-    });
+    }).catch(e => console.log("Fehler beim Laden der Zahlen", e));
 
 /* =========================
    2. ZAHLEN NORMALISIEREN
 ========================= */
 function normalizeNumbers(text) {
-
-    if (!numberMap || Object.keys(numberMap).length === 0) {
-        return text;
-    }
-
+    if (!numberMap || Object.keys(numberMap).length === 0) return text;
     let t = text.toLowerCase();
-
     for (const word of numberKeys) {
-
         const value = numberMap[word];
-
         const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
         t = t.replace(new RegExp(escaped, "g"), value);
     }
-
     return t;
 }
 
@@ -186,32 +181,18 @@ function normalizeNumbers(text) {
    3. SPEECH PIPELINE
 ========================= */
 function processSpeech(text) {
-
     if (!text) return "";
-
     let t = text.toLowerCase();
-
-    // optional: "und" entfernen für bessere Zahlenerkennung
     t = t.replace(/ und /g, "");
-
-    // Zahlen umwandeln
     t = normalizeNumbers(t);
-
     return t;
 }
 
-/* =========================
-   4. VOSK OUTPUT HANDLER (BEISPIEL)
-========================= */
 function handleVoskResult(resultText) {
-
     const normalized = processSpeech(resultText);
-
-    console.log("RAW:", resultText);
-    console.log("FINAL:", normalized);
-
     return normalized;
 }
+
 const wordCorrections = {
     "amos": ["arm los"],
     "obadja": ["opa ja"],
@@ -233,233 +214,301 @@ const wordCorrections = {
     "petrus":["petrus"]
 };
 
-
-
     // SPRACH-KONFIGURATION
     const languages = {
         "de": {
             modelFile: 'model.tar.gz',
-            bibleFile: 'bible_de.json', // Deine neue Datei
-         description: 'Deutsch',
+            bibleFile: 'bible_de.json',
+            description: 'Deutsch',
             chapterWord: 'kapitel', verseWord: 'vers',
             fillWords: ["und", "bis", "im", "der", "das"],
             numbers: {
-    // --- Ordnungszahlen (für 1. Mose, 2. Johannes etc.) ---
-    "erster": "1", "erste": "1", "ersten": "1",
-    "zweiter": "2", "zweite": "2", "zweiten": "2",
-    "dritter": "3", "dritte": "3", "dritten": "3",
-    "vierter": "4", "vierte": "4", "vierten": "4",
-    "fünfter": "5", "fünfte": "5", "fünften": "5",
-
-    // --- Zehner-Einheiten (Zuerst prüfen!) ---
-    "einundzwanzig": "21", "zweiundzwanzig": "22", "dreiundzwanzig": "23",
-    "vierundzwanzig": "24", "fünfundzwanzig": "25", "sechsundzwanzig": "26",
-    "siebenundzwanzig": "27", "achtundzwanzig": "28", "neunundzwanzig": "29",
-
-    // --- Teens (13-19) ---
-    "neunzehn": "19", "achtzehn": "18", "siebzehn": "17", "sechzehn": "16",
-    "fünfzehn": "15", "vierzehn": "14", "dreizehn": "13",
-
-    // --- Volle Zehner ---
-    "neunzig": "90", "achtzig": "80", "siebzig": "70", "sechzig": "60",
-    "fünfzig": "50", "vierzig": "40", "dreißig": "30", "zwanzig": "20",
-
-    // --- Grundzahlen (1-12) ---
-    "zwölf": "12", "elf": "11", "zehn": "10", "neun": "9", "acht": "8",
-    "sieben": "7", "sechs": "6", "fünf": "5", "vier": "4", "drei": "3",
-    "zwei": "2", "eins": "1", "eine": "1", "ein": "1", "einhundertzwölf":"112",
-},
-     books: {
+                "erster": "1", "erste": "1", "ersten": "1", "zweiter": "2", "zweite": "2", "zweiten": "2",
+                "dritter": "3", "dritte": "3", "dritten": "3", "vierter": "4", "vierte": "4", "vierten": "4",
+                "fünfter": "5", "fünfte": "5", "fünften": "5", "einundzwanzig": "21", "zweiundzwanzig": "22", "dreiundzwanzig": "23",
+                "vierundzwanzig": "24", "fünfundzwanzig": "25", "sechsundzwanzig": "26", "siebenundzwanzig": "27", "achtundzwanzig": "28", "neunundzwanzig": "29",
+                "neunzehn": "19", "achtzehn": "18", "siebzehn": "17", "sechzehn": "16", "fünfzehn": "15", "vierzehn": "14", "dreizehn": "13",
+                "neunzig": "90", "achtzig": "80", "siebzig": "70", "sechzig": "60", "fünfzig": "50", "vierzig": "40", "dreißig": "30", "zwanzig": "20",
+                "zwölf": "12", "elf": "11", "zehn": "10", "neun": "9", "acht": "8", "sieben": "7", "sechs": "6", "fünf": "5", "vier": "4", "drei": "3",
+                "zwei": "2", "eins": "1", "eine": "1", "ein": "1", "einhundertzwölf":"112",
+            },
+            books: {
                 "1 mose":"01", "2 mose":"02", "3 mose":"03", "4 mose":"04", "5 mose":"05", "josua":"06", "richter":"07", "ruth":"08", "1 samuel":"09","2 samuel":"10", "1 könige":"11","2 könige":"12", "1 chronika":"13","2 chronika":"14", "esra":"15", "nehemia":"16", "esther":"17", "hiob":"18", "psalm":"19", "psalmen":"19", "sprüche":"20", "prediger":"21", "hohes lied":"22", "jesaja":"23", "jeremia":"24", "klagelieder":"25", "hesekiel":"26", "daniel":"27", "hosea":"28", "joel":"29", "amos":"30", "obadja":"31", "jona":"32", "micha":"33", "nahum":"34", "habakuk":"35", "zephanja":"36", "haggai":"37", "sacharja":"38", "maleachi":"39",
-                 "matthäus":"40", "markus":"41", "lukas":"42", "apostelgeschichte":"44", "römer":"45", "1 korinther":"46","2 korinther":"47", "galater":"48", "epheser":"49", "philipper":"50", "kolosser":"51", "1 thessalonicher":"52","2 thessalonicher":"53", "1 timotheus":"54", "2 timotheus":"55", "titus":"56", "philemon":"57", "hebräer":"58", "jakobus":"59", "1 petrus":"60","2 petrus":"61", "1 johannes":"62","2 johannes":"63","3 johannes":"64","johannes":"43", "judas":"65", "offenbarung":"66"
+                "matthäus":"40", "markus":"41", "lukas":"42", "apostelgeschichte":"44", "römer":"45", "1 korinther":"46","2 korinther":"47", "galater":"48", "epheser":"49", "philipper":"50", "kolosser":"51", "1 thessalonicher":"52","2 thessalonicher":"53", "1 timotheus":"54", "2 timotheus":"55", "titus":"56", "philemon":"57", "hebräer":"58", "jakobus":"59", "1 petrus":"60","2 petrus":"61", "1 johannes":"62","2 johannes":"63","3 johannes":"64","johannes":"43", "judas":"65", "offenbarung":"66"
             }
         },
         "en": {
-            modelFile: 'model-en.zip', // Englisches Vosk Modell!
+            modelFile: 'model-en.zip',
             chapterWord: 'chapter', verseWord: 'verse',
             fillWords: ["and", "to", "in", "the"],
             numbers: { "one":"1", "two":"2", "three":"3", "four":"4", "five":"5" },
-            books: { "genesis":"01", "exodus":"02", "psalms":"19", "matthew":"40", "john":"43", "revelation":"66" } // Beispielhaft gekürzt
+            books: { "genesis":"01", "exodus":"02", "psalms":"19", "matthew":"40", "john":"43", "revelation":"66" }
         }
     };
 
     const dbName = "BibelAppDB";
+
 async function init() {
     if ('serviceWorker' in navigator) {
-        const reg = await navigator.serviceWorker.register('sw.js');
-
-        // Wenn wir SAB noch nicht haben, müssen wir den SW scharf schalten
-        if (!window.SharedArrayBuffer) {
+        const reg = await navigator.serviceWorker.register('sw.js').catch(e => console.log(e));
+        if (!window.SharedArrayBuffer && reg) {
             console.warn("SAB fehlt. Aktiviere Service Worker...");
-
-            // Falls schon ein SW wartet, aktivieren wir ihn sofort
-            if (reg.waiting) {
-                reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-            }
-
-            // Sobald ein neuer SW die Kontrolle übernimmt -> Reload
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                window.location.reload();
-            });
-
-            // Falls der SW schon aktiv ist, aber die Seite beim ersten Laden
-            // noch nicht "intercepted" hat, hilft ein manueller Reload nach 1 Sekunde
-            setTimeout(() => {
-                if (!window.SharedArrayBuffer) window.location.reload();
-            }, 2000);
-
+            if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload());
+            setTimeout(() => { if (!window.SharedArrayBuffer) window.location.reload(); }, 2000);
             return;
         }
     }
+
+    loadHistoryData(); // Lade gespeicherte Historie
     await loadDatabaseAndModel();
 }
 
-function updateHistory() {
+/* =========================
+   HISTORY & PERSISTENZ
+========================= */
+function loadHistoryData() {
+    const saved = localStorage.getItem('bibelHistoryApp');
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            if (parsed.length > 0) {
+                currentVerse = parsed[0];
+                verseHistory = parsed.slice(1);
+            }
+        } catch(e) { console.error("Fehler beim Laden der Historie", e); }
+    }
+}
+
+function saveHistoryData() {
+    let toSave = [];
+    if (currentVerse) toSave.push(currentVerse);
+    toSave = toSave.concat(verseHistory).slice(0, 10); // Nur letzte 10 behalten
+    localStorage.setItem('bibelHistoryApp', JSON.stringify(toSave));
+}
+
+// Wenn in der Historie auf einen Vers geklickt wird
+function loadFromHistory(index) {
+    if (currentVerse) {
+        verseHistory.unshift(currentVerse); // Bisherigen aktuellen Vers in die History packen
+    }
+    currentVerse = verseHistory.splice(index, 1)[0]; // Angeklickten Vers aus History holen
+
+    renderCurrentVerse();
+    updateHistoryUI();
+    saveHistoryData();
+    window.scrollTo({ top: 0, behavior: 'smooth' }); // Nach oben scrollen
+}
+
+// Render-Funktion für die History-Liste
+function updateHistoryUI() {
     const container = document.getElementById('history-container');
     if (!container) return;
 
     container.innerHTML = "";
 
     verseHistory.forEach((v, index) => {
-        const isNewest = index === 0;
-
         const div = document.createElement("div");
-        div.className = "verse-history-item" + (isNewest ? " newest" : "");
+        div.className = "verse-history-item";
+        div.setAttribute("onclick", `loadFromHistory(${index})`); // Klickbar machen
 
         div.innerHTML = `
-            <h4>${v.title}</h4>
+            <h4><span style="font-size:0.8em; opacity:0.6;">🕒 Verlauf:</span> ${v.title}</h4>
             <p>${v.text}</p>
         `;
-
         container.appendChild(div);
     });
 }
 
-async function loadDatabaseAndModel() {
+// Render-Funktion für den aktuell fokussierten Vers
+function renderCurrentVerse(showChapter = false) {
+    const container = document.getElementById('current-verse-container');
+    if (!currentVerse) {
+        container.innerHTML = "";
+        return;
+    }
 
+    let html = `<div class="verse-focus" id="swipeable-verse">`;
+    html += `<h2 style="color: #4caf50;">✔ ${currentVerse.title}</h2>`;
+
+    if (showChapter && bibleData) {
+        html += `<div class="chapter-scroll-container" id="chapter-container">`;
+        const chapterData = bibleData[currentVerse.buchName][currentVerse.kapitel];
+
+        for (let v in chapterData) {
+            const isTarget = (v == currentVerse.vers);
+            html += `<p class="${isTarget ? 'highlighted-verse' : 'context-verse'}" id="v-${v}">
+                        <span class="vers-num">${v}</span>${chapterData[v]}
+                     </p>`;
+        }
+        html += `</div>`;
+        html += `<button class="btn-context" onclick="renderCurrentVerse(false)">🔙 Zurück zum Einzelvers</button>`;
+    } else {
+        html += `<p class="verse-text-large">${currentVerse.text}</p>`;
+        html += `<button class="btn-context" onclick="renderCurrentVerse(true)">📖 Ganzes Kapitel lesen</button>`;
+    }
+
+    html += `</div>`;
+    container.innerHTML = html;
+
+    // Auto-Scroll zum Vers in der Kapitelansicht
+    if (showChapter) {
+        setTimeout(() => {
+            const targetEl = document.getElementById(`v-${currentVerse.vers}`);
+            const scrollContainer = document.getElementById('chapter-container');
+            if (targetEl && scrollContainer) {
+                scrollContainer.scrollTop = targetEl.offsetTop - scrollContainer.offsetTop - 40;
+            }
+        }, 50);
+    }
+
+    setupSwipe();
+}
+
+// Swipe-to-Delete Logik
+function setupSwipe() {
+    const el = document.getElementById('swipeable-verse');
+    if (!el) return;
+
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    el.addEventListener('touchstart', e => {
+        touchStartX = e.changedTouches[0].screenX;
+    }, {passive: true});
+
+    el.addEventListener('touchend', e => {
+        touchEndX = e.changedTouches[0].screenX;
+        handleSwipe();
+    }, {passive: true});
+
+    function handleSwipe() {
+        if (touchStartX - touchEndX > 60) {
+            el.style.transform = 'translateX(-100%)';
+            el.style.opacity = '0';
+            setTimeout(() => {
+                currentVerse = null; // Aktuellen Vers löschen
+                renderCurrentVerse();
+                saveHistoryData();
+            }, 300);
+        }
+    }
+}
+
+
+/* =========================
+   SYSTEM LADEN
+========================= */
+async function loadDatabaseAndModel() {
     const dot = document.getElementById('dot-status');
     const statusText = document.getElementById('system-status');
     const btn = document.getElementById('btn-listen');
 
-    if (dot) dot.className = "status-dot ready";
-    if (statusText) statusText.innerHTML = `<span class="status-dot ready"></span>Bereit zum Hören`;
-    if (btn) btn.disabled = false;
-
+    // SICHERHEIT: Button sperren bis Modell GANZ sicher da ist.
+    if (dot) dot.className = "status-dot";
+    if (statusText) statusText.innerHTML = `<span class="status-dot"></span>System lädt...`;
+    if (btn) btn.disabled = true;
 
     console.log("--- DIAGNOSE START ---");
 
     const langConfig = languages[currentLang];
-    console.log(langConfig.bibleFile);
-    // 1. Bibel JSON laden
-    const response = await fetch(langConfig.bibleFile);
-    bibleData = await response.json();
-    console.log(bibleData);
-   if(!bibleData) {
+    try {
+        const response = await fetch(langConfig.bibleFile);
+        bibleData = await response.json();
+    } catch(e) {
+        console.error("Bibeldatei nicht ladbar", e);
+    }
+
+    if(!bibleData) {
         console.error("DIAGNOSE: Keine Bibeldaten gefunden!");
         statusText.innerHTML = `<span class="status-dot error"></span>Bibel fehlt!`;
         return;
     }
-    console.log("DIAGNOSE: Bibel-Check OK.");
 
-    // Check 2: Vosk Bibliothek geladen?
+    // UI initial aktualisieren falls wir schon Daten aus LocalStorage haben
+    renderCurrentVerse();
+    updateHistoryUI();
+
     if (typeof Vosk === 'undefined') {
-        console.error("DIAGNOSE: vosk.js wurde nicht geladen! Pfad prüfen.");
+        console.error("DIAGNOSE: vosk.js wurde nicht geladen!");
         statusText.innerHTML = `<span class="status-dot error"></span>vosk.js fehlt!`;
         return;
     }
-    console.log("DIAGNOSE: vosk.js ist im Browser bereit.");
-
-    // Check 3: Browser-Sicherheit (WICHTIGSTES THEMA)
     if (!window.SharedArrayBuffer) {
-        console.error("DIAGNOSE: SharedArrayBuffer BLOCKIERT! Vosk kann nicht starten.");
-        console.warn("LÖSUNG: Du musst den dev_server.py mit den speziellen Headern nutzen!");
+        console.error("DIAGNOSE: SharedArrayBuffer BLOCKIERT!");
         statusText.innerHTML = `<span class="status-dot error"></span>Sicherheitssperre im Browser!`;
         return;
     }
-    console.log("DIAGNOSE: Browser-Sicherheit OK (SharedArrayBuffer erlaubt).");
 
-    statusText.innerHTML = `<span class="status-dot"></span>Lade Modell...`;
+    statusText.innerHTML = `<span class="status-dot"></span>Lade Modell (Bitte warten)...`;
 
+    try {
+        const currentModelFile = languages[currentLang].modelFile;
+        const modelUrl = new URL(currentModelFile, window.location.href).href;
 
-try {
-    const currentModelFile = languages[currentLang].modelFile;
+        // HIER WIRD GELADEN
+        model = await Vosk.createModel(modelUrl);
 
-    // Erzeugt die absolut korrekte URL (z.B. https://deinname.github.io/nw_verse_ai/model.tar.gz)
-    const modelUrl = new URL(currentModelFile, window.location.href).href;
+        console.log("DIAGNOSE: MODELL GELADEN!");
+        dot.className = "status-dot ready";
+        statusText.innerHTML = `<span class="status-dot ready"></span>Bereit zum Hören`;
 
-    console.log("DIAGNOSE: Erzwinge Laden von Datei:", modelUrl);
+        // ERST JETZT darf der Button freigeschaltet werden!
+        btn.disabled = false;
 
-    // Nutze die absolute URL
-    model = await Vosk.createModel(modelUrl);
-
-    console.log("DIAGNOSE: MODELL GELADEN!");
-    dot.className = "status-dot ready";
-    statusText.innerHTML = `<span class="status-dot ready"></span>Bereit zum Hören`;
-    btn.disabled = false;
     } catch(e) {
         console.error("DIAGNOSE FEHLER:", e.message);
         dot.className = "status-dot error";
         statusText.innerHTML = `<span class="status-dot error"></span>Ladefehler: ${e.message}`;
+        if (btn) btn.disabled = true;
     }
 }
 
+async function changeLanguage() {
+    if(isListening) toggleListen();
+    currentLang = document.getElementById('lang-select').value;
+    await loadDatabaseAndModel();
+}
 
+function openJwDownload() {
+    const links = {
+        "de": "https://www.jw.org/de/bibliothek/bibel/nwt/bibeluecher/",
+        "en": "https://www.jw.org/en/library/bible/nwt/books/"
+    };
+    window.open(links[currentLang] || links["de"], '_blank');
+}
 
-    async function changeLanguage() {
-        if(isListening) toggleListen();
-        currentLang = document.getElementById('lang-select').value;
-        await loadDatabaseAndModel();
-    }
-
-    // --- JW.ORG LINKS (KEIN HOTLINKING) ---
-    function openJwDownload() {
-        const links = {
-            "de": "https://www.jw.org/de/bibliothek/bibel/nwt/bibeluecher/",
-            "en": "https://www.jw.org/en/library/bible/nwt/books/"
+function saveBibelLocally(data) {
+    return new Promise((res) => {
+        const req = indexedDB.open(dbName, 1);
+        req.onupgradeneeded = (e) => e.target.result.createObjectStore("bibelStore");
+        req.onsuccess = (e) => {
+            e.target.result.transaction("bibelStore", "readwrite").objectStore("bibelStore").put(data, "nwt_text").onsuccess = () => res(true);
         };
-        window.open(links[currentLang] || links["de"], '_blank');
-    }
+    });
+}
 
-    // --- DATENBANK & IMPORT ---
-    function saveBibelLocally(data) {
-        return new Promise((res) => {
-            const req = indexedDB.open(dbName, 1);
-            req.onupgradeneeded = (e) => e.target.result.createObjectStore("bibelStore");
-            req.onsuccess = (e) => {
-                e.target.result.transaction("bibelStore", "readwrite").objectStore("bibelStore").put(data, "nwt_text").onsuccess = () => res(true);
-            };
-        });
-    }
-
-    function loadBibelLocally() {
-        return new Promise((res) => {
-            const req = indexedDB.open(dbName, 1);
-            req.onupgradeneeded = (e) => { e.target.result.createObjectStore("bibelStore"); res(null); };
-            req.onsuccess = (e) => {
-                const db = e.target.result;
-                if(!db.objectStoreNames.contains("bibelStore")) return res(null);
-                const getReq = db.transaction("bibelStore", "readonly").objectStore("bibelStore").get("nwt_text");
-                getReq.onsuccess = () => res(getReq.result);
-            };
-        });
-    }
-
-
-
-
-
+function loadBibelLocally() {
+    return new Promise((res) => {
+        const req = indexedDB.open(dbName, 1);
+        req.onupgradeneeded = (e) => { e.target.result.createObjectStore("bibelStore"); res(null); };
+        req.onsuccess = (e) => {
+            const db = e.target.result;
+            if(!db.objectStoreNames.contains("bibelStore")) return res(null);
+            const getReq = db.transaction("bibelStore", "readonly").objectStore("bibelStore").get("nwt_text");
+            getReq.onsuccess = () => res(getReq.result);
+        };
+    });
+}
 
 function cleanText(text) {
-    return text
-        .replace(/kapitel\s+\w+/g, "kapitel")
-        .replace(/vers\s+\w+/g, "vers");
+    return text.replace(/kapitel\s+\w+/g, "kapitel").replace(/vers\s+\w+/g, "vers");
 }
-
 
 async function importJwpub(file) {
     if (!file) return;
     const istat = document.getElementById('import-status');
-    istat.innerHTML = "⏳ Verarbeite moderne Datenbank-Struktur...";
+    istat.innerHTML = "⏳ Verarbeite Datenbank...";
 
     try {
         const zip1 = await JSZip.loadAsync(file);
@@ -470,7 +519,6 @@ async function importJwpub(file) {
             const contentsBlob = await contentsFile.async("uint8array");
             const zip2 = await JSZip.loadAsync(contentsBlob);
             const filesInContents = Object.keys(zip2.files);
-            // Nimm die größte Datei im inneren ZIP (die Datenbank)
             let realDbName = filesInContents.sort((a,b) => zip2.files[b]._data.uncompressedSize - zip2.files[a]._data.uncompressedSize)[0];
             dbUint8 = await zip2.files[realDbName].async("uint8array");
         } else {
@@ -481,18 +529,13 @@ async function importJwpub(file) {
         const SQL = await initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${f}` });
         const db = new SQL.Database(dbUint8);
 
-        // BibleVerseId: BBBCCCVVV (Buch, Kapitel, Vers)
-        // Wir holen BibleVerseId (r[0]) und Content (r[1])
         const res = db.exec("SELECT BibleVerseId, Content FROM BibleVerse");
-
         if (!res || res.length === 0) throw new Error("Keine Daten in BibleVerse gefunden.");
 
         const json = {};
         res[0].values.forEach(r => {
             const idValue = r[0];
             const contentValue = r[1];
-
-            // Nur verarbeiten, wenn eine ID und Text vorhanden sind
             if (idValue && contentValue && typeof contentValue === 'string') {
                 const id = String(idValue).padStart(9, '0');
                 const bookNum = id.substring(0, 3).slice(-2);
@@ -502,7 +545,6 @@ async function importJwpub(file) {
                 if(!json[bookNum]) json[bookNum] = {};
                 if(!json[bookNum][chapNum]) json[bookNum][chapNum] = {};
 
-                // Text säubern (HTML entfernen und Leerzeichen normalisieren)
                 let cleanText = contentValue.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
                 json[bookNum][chapNum][versNum] = cleanText;
             }
@@ -512,8 +554,6 @@ async function importJwpub(file) {
         bibleData = json;
 
         istat.innerHTML = `✅ Erfolg! Bibel geladen.`;
-        console.log("Import erfolgreich abgeschlossen.");
-
         await loadDatabaseAndModel();
         setTimeout(() => showTab('listen'), 1000);
 
@@ -523,126 +563,54 @@ async function importJwpub(file) {
     }
 }
 
+function normalizeText(text) { return text.toLowerCase(); }
 
-function normalizeNumbers(text) {
-
-    let normalized = text.toLowerCase();
-
-    // längste zuerst (wichtig!)
-    const sortedWords = Object.keys(numberMap)
-        .sort((a, b) => b.length - a.length);
-
-    for (const word of sortedWords) {
-
-        const value = numberMap[word];
-
-        const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(escaped, "g");
-
-        normalized = normalized.replace(regex, value);
-    }
-
-    return normalized;
-}
-
-
-// Ergänzung für dein numbers-Objekt:
-const germanNumbers = {
-    "eins": "1", "zwei": "2", "drei": "3", "vier": "4", "fünf": "5",
-    "sechs": "6", "sieben": "7", "acht": "8", "neun": "9", "zehn": "10",
-    "elf": "11", "zwölf": "12", "dreizehn": "13", "vierzehn": "14",
-    "fünfzehn": "15", "sechzehn": "16", "siebzehn": "17", "achtzehn": "18",
-    "neunzehn": "19", "zwanzig": "20", "dreißig": "30", "vierzig": "40",
-    "fünfzig": "50", "sechzig": "60", "siebzig": "70", "achtzig": "80", "neunzig": "90"
-};
-
-// Für die Grammatik (damit Vosk diese Wörter überhaupt kennt):
-const grammarNumbers = Object.keys(germanNumbers);
-
-
-function normalizeText(text) {
-    return text.toLowerCase();
-}
-
-  function verarbeiteText(text) {
-   if (!text || text.length === 0) return;
+function verarbeiteText(text) {
+    if (!text || text.length === 0) return;
     document.getElementById('live-text').innerText = text;
 
     let normalized = normalizeText(text);
-    //normalized = correctWords(normalized);
     normalized = normalizeNumbers(normalized);
-    console.log("NORMALIZED:", normalized);
-
     const ref = extractReference(normalized);
 
-    console.log(ref);
     if (ref && ref.book && ref.chapter && ref.verse) {
-        console.log("GEFUNDEN:", ref);
         zeigeVersAn(ref.book, ref.chapter, ref.verse);
-    } else {
-        console.log("Keine vollständige Referenz erkannt:", ref);
     }
 }
 
-
-function applyWordCorrections(resultText, wordCorrections) {
-    let text = resultText.toLowerCase();
-
-    for (const [correctWord, variants] of Object.entries(wordCorrections)) {
-        for (const variant of variants) {
-            const regex = new RegExp(`\\b${variant}\\b`, "gi");
-            text = text.replace(regex, correctWord);
-        }
-    }
-
-    return text;
-}
 function applyWordCorrectionsToWords(words, wordCorrections) {
-console.log("new");
     let result = [];
-
     for (let i = 0; i < words.length; i++) {
         let current = words[i].word.toLowerCase();
         let next = words[i + 1]?.word.toLowerCase();
-
         let combined = next ? current + " " + next : current;
-
         let replaced = false;
 
         for (const [correct, variants] of Object.entries(wordCorrections)) {
-
-            // 🔥 1. Mehrwort prüfen (z.B. "opa ja")
             if (variants.includes(combined)) {
-                result.push({
-                    ...words[i],
-                    word: correct
-                });
-                i++; // nächstes Wort überspringen!
+                result.push({ ...words[i], word: correct });
+                i++;
                 replaced = true;
                 break;
             }
-
-            // 🔥 2. Einzelwort prüfen
             if (variants.includes(current)) {
-                result.push({
-                    ...words[i],
-                    word: correct
-                });
+                result.push({ ...words[i], word: correct });
                 replaced = true;
                 break;
             }
         }
-
-        if (!replaced) {
-            result.push(words[i]);
-        }
+        if (!replaced) result.push(words[i]);
     }
-
     return result;
 }
 
-    // --- SPRACHERKENNUNG ---
   async function toggleListen() {
+    // SICHERHEITS-CHECK: Ist das Modell wirklich da?
+    if (!model) {
+        alert("Das Sprachmodell wird noch geladen. Bitte warte einen kleinen Moment!");
+        return;
+    }
+
     const btn = document.getElementById('btn-listen');
 
     if (isListening) {
@@ -654,159 +622,76 @@ console.log("new");
     }
 
     try {
-        // 1. AudioContext auf 16000Hz zwingen (WICHTIG!)
         if (!audioContext) {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)({
-                sampleRate: 16000,
-            });
+            audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
         }
         if (audioContext.state === 'suspended') await audioContext.resume();
 
-        // 2. Mikrofon mit 16000Hz anfordern
         const stream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-                sampleRate: 16000,
-                channelCount: 1,
-                echoCancellation: true
-            }
+            audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true }
         });
-        console.log("Tatsächliche Audio-Rate:", audioContext.sampleRate);
-        // 3. Recognizer-Erstellung (Wir nutzen wieder KaldiRecognizer, da das vorhin klappte)
+
       if (!recognizer) {
-            console.log("Erstelle Recognizer...");
-            // Hilfsfunktion, um Zahlen von 1 bis 150 schnell zu generieren
-//const zahlenReihe = Array.from({length: 150}, (_, i) => (i + 1).toString());
-const zahlenWoerter = [
-    "erste","zweite","dritte","vierte","fünfte",
-    "eins", "zwei", "drei", "vier", "fünf", "sechs", "sieben", "acht", "neun", "zehn",
-    "elf", "zwölf", "dreizehn", "vierzehn", "fünfzehn", "sechzehn", "siebzehn", "achtzehn", "neunzehn", "zwanzig",
-    "einundzwanzig","zweiundzwanzig","dreiundzwanzig","vierundzwanzig","fünfundzwanzig","sechsundzwanzig",
-    "siebenundzwanzig", "achtundzwanzig", "neunundzwanzig",
-    "dreißig", "vierzig", "fünfzig", "sechzig", "siebzig", "achtzig", "neunzig", "hundert", "einhundertundzwölf", "hundertundzwölf"
-];
+        fetch("data/de/de_vokabular.json")
+          .then(response => response.json())
+          .then(json => {
+            alleWoerter = Object.values(json).flat();
+            const bookNames = Object.keys(bibleData);
+            let wordsFromBooks = [];
+            bookNames.forEach(book => {
+                const parts = book.toLowerCase().replace(/\./g, '').split(' ');
+                wordsFromBooks.push(...parts);
+            });
 
-fetch("data/de/de_vokabular.json")
-  .then(response => response.json())
-  .then(json => {
-    // 2. alle Wörter in ein einfaches Array umwandeln
-    alleWoerter = Object.values(json).flat();
+            const keywords = ["kapitel", "vers", "und","lesen", "aufschlagen","öffnen", "bis","buch","bibel","wir","bitte","gemeinsam"];
+            const cleanGrammar = [...wordsFromBooks, ...numberKeys, ...keywords, ...alleWoerter].map(w => w.replace(".", ""));
+            cleanGrammar.push("[unk]");
 
+            for (const variants of Object.values(wordCorrections)) {
+                cleanGrammar.push(...variants);
+            }
 
-console.log(alleWoerter);
+            // Da 'model' jetzt sicher existiert, knallt es hier nicht mehr.
+            recognizer = new model.KaldiRecognizer(16000, JSON.stringify(cleanGrammar));
+            recognizer.setWords(true);
 
-        // 2. Grammatik extrahieren
-        // Wir nehmen die Buchnamen (z.B. "1. Mose") und alle Zahlen
-        const bookNames = Object.keys(bibleData);
-        let wordsFromBooks = [];
-bookNames.forEach(book => {
-    // "1. Mose" -> ["1", "mose"]
-    const parts = book.toLowerCase().replace(/\./g, '').split(' ');
-    wordsFromBooks.push(...parts);
-});
-        console.log(bookNames);
-        const numbers = Array.from({length: 151}, (_, i) => (i).toString()); // 0 bis 150
-        const keywords = ["kapitel", "vers", "und","lesen", "aufschlagen","öffnen", "bis","buch","bibel","wir","bitte","gemeinsam"];
+            recognizer.on("result", (msg) => {
+                const data = msg.result;
+                if (!data.result || data.result.length === 0) return;
 
-        // Vosk mag keine Satzzeichen in der Grammatik-Liste (Punkt bei 1. Mose entfernen für die Erkennung)
-        const cleanGrammar = [...wordsFromBooks, ...numberKeys, ...keywords, ...alleWoerter].map(w => w.replace(".", ""));
-        cleanGrammar.push("[unk]");
+                let words = data.result || [];
+                words = applyWordCorrectionsToWords(words, wordCorrections);
+                const guteWoerter = words.filter(w => w.conf >= 0.8);
+                const filteredText = guteWoerter.map(w => w.word).join(' ');
 
-        for (const variants of Object.values(wordCorrections)) {
-    cleanGrammar.push(...variants);
-}
-console.log("numberKeys");
-// Alles kombinieren
-//const grammar = JSON.stringify([
- //   ...buecher,
-  //  ...zahlenReihe,
-  //  ...numberKeys,
-  //  "kapitel", "vers", "und"
-//]);
-
-//const grammarString = `#JSGF V1.0;\ngrammar bibel;\npublic <buch> = ${cleanGrammar.join(' | ')};`;
-//recognizer = new model.KaldiRecognizer(16000,  grammarString);
-
-
-recognizer = new model.KaldiRecognizer(16000,  JSON.stringify(cleanGrammar));
-recognizer.setWords(true);
-console.log("Recognizer created");
-          recognizer.on("partialresult", (msg) => {
-            const text = msg.result?.partial || "";
-           // console.log("PARTIAL TEXT:", text);
-           // console.log(msg);
-        });
-
-      recognizer.on("result", (msg) => {
-
-    const data = msg.result;
-
-    if (!data.result || data.result.length === 0) {
-        console.log("Keine Wörter erkannt (leise/null)");
-        return;
-    }
-
-    let words = data.result || [];
-
-    // 🔥 Wortkorrektur anwenden
-    words = applyWordCorrectionsToWords(words, wordCorrections);
-
-    console.log("Volltext:", data.text);
-
-    words.forEach((wort, index) => {
-        console.log(`Wort ${index + 1}: "${wort.word}" | Conf: ${wort.conf.toFixed(3)}`);
-    });
-
-    // ✅ Danach filtern
-    const guteWoerter = words.filter(w => w.conf >= 0.8);
-
-    const filteredText = guteWoerter.map(w => w.word).join(' ');
-
-    // 🔥 Jetzt ist der Text bereits korrigiert
-    verarbeiteText(filteredText);
-
-      })
-  .catch(error => console.error("Fehler beim Laden der JSON‑Datei:", error));
-});
-
-console.log(recognizer);
-}
+                verarbeiteText(filteredText);
+            })
+          }).catch(error => console.error("Fehler beim Laden des Vokabulars:", error));
+        }
 
         source = audioContext.createMediaStreamSource(stream);
-        // ScriptProcessor für maximale Kompatibilität
         processor = audioContext.createScriptProcessor(4096, 1, 1);
-        console.log("2");
 
-
-       processor.onaudioprocess = (e) => {
+        processor.onaudioprocess = (e) => {
             if (!recognizer || !isListening) return;
-
-            try {
-                recognizer.acceptWaveform(e.inputBuffer);
-            } catch (err) {
-                console.error("Vosk error:", err);
-            }
+            try { recognizer.acceptWaveform(e.inputBuffer); } catch (err) {}
         };
+
         source.connect(processor);
         processor.connect(audioContext.destination);
 
         isListening = true;
         btn.innerText = "Zuhören stoppen...";
-        console.log("Mikrofon ist LIVE (16000Hz).");
 
     } catch (err) {
-        console.error("Fehler beim Mikrofon-Start:", err);
-        alert("Fehler: " + err.message);
+        alert("Fehler bei Mikrofonzugriff: " + err.message);
     }
 }
-
-
-
 
 function extractReference(text) {
     const conf = languages[currentLang];
     const textLower = text.toLowerCase();
 
-    // 1. Alle Buchvorkommen finden (mit Position)
     let foundBooks = [];
     for (const bookName of Object.keys(conf.books)) {
         const bookLower = bookName.toLowerCase();
@@ -819,7 +704,6 @@ function extractReference(text) {
 
     if (foundBooks.length === 0) return null;
 
-    // 2. Alle Zahlen finden (mit Position)
     const numberMatches = [];
     const numRegex = /\d+/g;
     let m;
@@ -829,14 +713,11 @@ function extractReference(text) {
 
     if (numberMatches.length === 0) return null;
 
-    // 3. Das "Anker-Buch" bestimmen
-    // Wir suchen das Buch, das am dichtesten VOR der ersten Zahl steht
     const firstNumIndex = numberMatches[0].index;
     let bestBook = foundBooks[0];
     let minDistance = Infinity;
 
     for (const b of foundBooks) {
-        // Distanz: Buch muss vor der Zahl stehen, oder nur knapp danach
         const distance = firstNumIndex - (b.index + b.length);
         if (distance >= -5 && distance < minDistance) {
             minDistance = distance;
@@ -844,140 +725,86 @@ function extractReference(text) {
         }
     }
 
-    // 4. Den Text ab dem gewählten Buch analysieren
     const relevantPart = textLower.substring(bestBook.index + bestBook.length);
     const relevantNumbers = relevantPart.match(/\d+/g) || [];
 
     let chapter = null;
     let verse = null;
 
-    // 5. Explizite Zuordnung (Vermeidung von Doppelnutzung derselben Zahl)
     const chapterMatch = relevantPart.match(/kapitel\s+(\d+)/);
     const verseMatch = relevantPart.match(/vers\s+(\d+)/);
 
-    if (chapterMatch) {
-        chapter = chapterMatch[1];
-    }
-    if (verseMatch) {
-        verse = verseMatch[1];
-    }
+    if (chapterMatch) chapter = chapterMatch[1];
+    if (verseMatch) verse = verseMatch[1];
 
-    // Fallback: Nur wenn noch nicht durch Keywords belegt
-    if (!chapter && relevantNumbers.length > 0) {
-        chapter = relevantNumbers[0];
-    }
+    if (!chapter && relevantNumbers.length > 0) chapter = relevantNumbers[0];
 
-    // WICHTIG: Vers darf nur gesetzt werden, wenn es wirklich eine ZWEITE Zahl gibt
-    // oder das Wort "vers" explizit davor stand.
     if (!verse && relevantNumbers.length > 1) {
-        // Wenn die erste Zahl als Kapitel verbraucht wurde, nimm die zweite
         verse = (relevantNumbers[0] === chapter) ? relevantNumbers[1] : relevantNumbers[0];
     } else if (!verse && verseMatch) {
         verse = verseMatch[1];
     }
 
-    // Validierung: Wenn Kapitel und Vers gleich sind, aber nur eine Zahl im Text steht -> Fehler korrigieren
-    if (chapter === verse && !verseMatch && relevantNumbers.length === 1) {
-        verse = null;
-    }
+    if (chapter === verse && !verseMatch && relevantNumbers.length === 1) verse = null;
 
-    return {
-        book: bestBook.name,
-        chapter: chapter,
-        verse: verse
-    };
+    return { book: bestBook.name, chapter: chapter, verse: verse };
 }
 
+// --- ANGEPASSTE ANZEIGE ---
+function zeigeVersAn(buchName, kapitel, vers) {
+    if (!bibleData || !bibleData[buchName] || !bibleData[buchName][kapitel] || !bibleData[buchName][kapitel][vers]) return;
 
-    // --- ANZEIGE ---
-  function zeigeVersAn(buchName, kapitel, vers) {
-
-    const conf = languages[currentLang];
-    const buchId = conf.books[buchName.toLowerCase()]; // z.B. "42" für Lukas
-
-    // 1. JW-Link generieren (Format: BuchID + Kapitel (3-stellig) + Vers (3-stellig))
-    // Beispiel Lukas (42) Kap 1 Vers 20 -> 42 001 020
-    const padKap = kapitel.toString().padStart(3, '0');
-    const padVers = vers.toString().padStart(3, '0');
-    const jwId = `${buchId}${padKap}${padVers}`;
-
-    const url = `https://www.jw.org/de/bibliothek/bibel/nwt/bibelbuecher/${buchName.toLowerCase()}/${kapitel}/#v${jwId}`;
     const titel = buchName.charAt(0).toUpperCase() + buchName.slice(1);
-    console.log(buchName);
-    console.log(kapitel);
-    console.log(vers);
-    console.log( bibleData[buchName]);
     const verseText = bibleData[buchName][kapitel][vers];
+    const newTitle = `${titel} ${kapitel}:${vers}`;
 
-    // 2. Anzeige im Container (Nur Status und Link)
-    document.getElementById('current-verse-container').innerHTML = `
-        <div class="verse-focus">
-            <h2 style="color: #4caf50;">✔ Vers gefunden</h2>
-            <p><strong>${titel} ${kapitel}:${vers}</strong></p><br>
-            <p class="verse-text-large">${verseText}</p>
-        </div>
-    `;
+    if (currentVerse && currentVerse.title === newTitle) return;
 
-    // 3. Optional: Vibration bei Erfolg
+    if (currentVerse) {
+        verseHistory.unshift(currentVerse);
+    }
+
+    currentVerse = {
+        buchName: buchName,
+        kapitel: kapitel,
+        vers: vers,
+        title: newTitle,
+        text: verseText
+    };
+
     if (navigator.vibrate) navigator.vibrate(50);
 
-    // --- HISTORY SPEICHERN ---
-
-const eintrag = {
-    title: `${titel} ${kapitel}:${vers}`,
-    text: verseText
-};
-
-// Doppelten direkten Treffer vermeiden
-if (!verseHistory.length || verseHistory[0].title !== eintrag.title) {
-    verseHistory.unshift(eintrag); // nach oben
-
-    // nur letzte 10 behalten
-    if (verseHistory.length > 10) {
-        verseHistory = verseHistory.slice(0, 10);
-    }
+    renderCurrentVerse(false);
+    updateHistoryUI();
+    saveHistoryData();
 }
 
-updateHistory();
+function showTab(tab) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-nav'));
+    document.getElementById('nav-' + tab).classList.add('active-nav');
 }
 
-    // --- UI HELFER ---
-    function showTab(tab) {
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-        document.getElementById('tab-' + tab).classList.add('active');
-        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-nav'));
-        document.getElementById('nav-' + tab).classList.add('active-nav');
-    }
-
-
-    function checkPassword() {
+function checkPassword() {
     const input = document.getElementById('pw-input').value;
     const errorMsg = document.getElementById('pw-error');
-
-    // HIER DEIN PASSWORT ÄNDERN
     const geheimnis = "1914";
 
     if (input === geheimnis) {
-        // Overlay entfernen und App zeigen
         document.getElementById('password-overlay').style.display = 'none';
         document.getElementById('app-content').style.display = 'block';
-
-        // Optional: Spracherkennung erst JETZT starten, falls sie automatisch losging
-        console.log("App entsperrt!");
     } else {
         errorMsg.style.display = 'block';
-        document.getElementById('pw-input').value = ""; // Feld leeren
+        document.getElementById('pw-input').value = "";
     }
 }
 
-// Ermöglicht das Drücken der "Enter"-Taste zum Entsperren
 document.getElementById('pw-input')?.addEventListener('keypress', function (e) {
-    if (e.key === 'Enter') {
-        checkPassword();
-    }
+    if (e.key === 'Enter') checkPassword();
 });
 
-    window.onload = init;
+window.onload = init;
 </script>
 </body>
 </html>

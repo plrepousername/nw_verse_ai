@@ -9,7 +9,8 @@ const ASSETS = [
   './manifest.json',
   './bible_de.json',
   './model.tar.gz',
-  './data/de/de_vokabular.json'
+  './data/de/de_vokabular.json',
+  './data/de/zahlen.json'
 ];
 
 // 1. INSTALLATION: Core-Dateien in den Cache laden
