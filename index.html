@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
     <title>Bibel-Lauscher Pro</title>
-    <!-- Dummy Favicon, um den 404-Fehler im Log zu unterdrücken -->
     <link rel="icon" href="data:,">
     <link href="manifest.json" rel="manifest">
     <script src="vosk.js"></script>
@@ -17,7 +16,6 @@
         #password-overlay h2 { color: #333; margin-bottom: 20px; }
         #pw-input:focus { outline: none; border-color: #4a6da7; }
 
-        /* Navigation */
         nav { display: flex; background: var(--surface); border-bottom: 1px solid #30363d; position: sticky; top: 0; z-index: 100; }
         nav button { flex: 1; background: none; border: none; color: var(--muted); padding: 15px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; border-bottom: 3px solid transparent; }
         nav button.active-nav { color: var(--text); border-bottom: 3px solid var(--primary); }
@@ -26,7 +24,6 @@
         .tab-content { display: none; }
         .active { display: block; }
 
-        /* Karten & Buttons */
         .card { background: var(--surface); padding: 20px; border-radius: 12px; border: 1px solid #30363d; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         button.btn-main { background: var(--primary); color: white; border: none; padding: 16px; border-radius: 8px; width: 100%; font-weight: bold; font-size: 1.1rem; cursor: pointer; transition: 0.2s; }
         button.btn-main:disabled { background: #21262d; color: var(--muted); cursor: not-allowed; }
@@ -34,7 +31,6 @@
 
         select.dropdown { padding: 8px 12px; background: #0d1117; color: var(--text); border: 1px solid #30363d; border-radius: 6px; font-size: 1rem; }
 
-        /* Status & Text */
         .status-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 0.95rem; font-weight: bold; }
         .status-dot { height: 12px; width: 12px; background-color: var(--muted); border-radius: 50%; display: inline-block; margin-right: 8px; vertical-align: middle; }
         .status-dot.ready { background-color: var(--primary); }
@@ -44,10 +40,12 @@
 
         /* Vers-Anzeige */
         .verse-focus { background: rgba(35, 134, 54, 0.1); border-left: 5px solid var(--primary); padding: 25px; border-radius: 12px; animation: fadeIn 0.4s ease-out; margin-bottom: 20px; position: relative; transition: transform 0.3s ease, opacity 0.3s ease; }
-        .verse-focus h2 { margin: 0 0 15px 0; color: var(--accent); font-size: 2rem; }
+        .verse-focus h2 { margin: 0 0 15px 0; color: var(--accent); font-size: 2rem; padding-right: 35px; }
         .verse-focus p { margin: 0; font-size: 1.5rem; line-height: 1.6; color: #fff; }
 
-        /* Kapitel-Kontext Ansicht */
+        .close-btn { position: absolute; top: 15px; right: 15px; background: rgba(218, 54, 51, 0.15); color: #da3633; border: none; border-radius: 50%; width: 34px; height: 34px; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
+        .close-btn:hover { background: #da3633; color: white; }
+
         .btn-context { background: transparent; color: var(--accent); border: 1px solid var(--accent); padding: 10px; border-radius: 8px; margin-top: 20px; cursor: pointer; width: 100%; font-size: 1rem; transition: 0.2s; }
         .btn-context:hover { background: rgba(88, 166, 255, 0.1); }
         .chapter-scroll-container { max-height: 50vh; overflow-y: auto; background: var(--bg); padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px solid #30363d; }
@@ -55,7 +53,6 @@
         .highlighted-verse { color: #fff !important; font-weight: bold; background: rgba(35, 134, 54, 0.2); padding: 8px; border-radius: 6px; border-left: 3px solid var(--primary); }
         .vers-num { color: var(--accent); font-size: 0.7em; margin-right: 5px; vertical-align: super; }
 
-        /* Historie */
         .verse-history-item { background: var(--surface); border: 1px solid #30363d; padding: 15px; border-radius: 8px; margin-bottom: 10px; opacity: 0.8; cursor: pointer; transition: 0.2s; }
         .verse-history-item:hover { background: #21262d; border-color: var(--accent); opacity: 1; transform: translateX(5px); }
         .verse-history-item h4 { margin: 0 0 8px 0; color: var(--muted); font-size: 1.1rem; }
@@ -82,8 +79,7 @@
     <p id="pw-error" style="color:red; display:none; margin-top:10px;">Falsches Passwort!</p>
 </div>
 
-<div id="app-content" style="display:none;">
-</div>
+<div id="app-content" style="display:none;"></div>
 
 <nav>
     <button class="active-nav" id="nav-listen" onclick="showTab('listen')">📖 Bibellesen</button>
@@ -177,22 +173,6 @@ function normalizeNumbers(text) {
     return t;
 }
 
-/* =========================
-   3. SPEECH PIPELINE
-========================= */
-function processSpeech(text) {
-    if (!text) return "";
-    let t = text.toLowerCase();
-    t = t.replace(/ und /g, "");
-    t = normalizeNumbers(t);
-    return t;
-}
-
-function handleVoskResult(resultText) {
-    const normalized = processSpeech(resultText);
-    return normalized;
-}
-
 const wordCorrections = {
     "amos": ["arm los"],
     "obadja": ["opa ja"],
@@ -222,16 +202,6 @@ const wordCorrections = {
             description: 'Deutsch',
             chapterWord: 'kapitel', verseWord: 'vers',
             fillWords: ["und", "bis", "im", "der", "das"],
-            numbers: {
-                "erster": "1", "erste": "1", "ersten": "1", "zweiter": "2", "zweite": "2", "zweiten": "2",
-                "dritter": "3", "dritte": "3", "dritten": "3", "vierter": "4", "vierte": "4", "vierten": "4",
-                "fünfter": "5", "fünfte": "5", "fünften": "5", "einundzwanzig": "21", "zweiundzwanzig": "22", "dreiundzwanzig": "23",
-                "vierundzwanzig": "24", "fünfundzwanzig": "25", "sechsundzwanzig": "26", "siebenundzwanzig": "27", "achtundzwanzig": "28", "neunundzwanzig": "29",
-                "neunzehn": "19", "achtzehn": "18", "siebzehn": "17", "sechzehn": "16", "fünfzehn": "15", "vierzehn": "14", "dreizehn": "13",
-                "neunzig": "90", "achtzig": "80", "siebzig": "70", "sechzig": "60", "fünfzig": "50", "vierzig": "40", "dreißig": "30", "zwanzig": "20",
-                "zwölf": "12", "elf": "11", "zehn": "10", "neun": "9", "acht": "8", "sieben": "7", "sechs": "6", "fünf": "5", "vier": "4", "drei": "3",
-                "zwei": "2", "eins": "1", "eine": "1", "ein": "1", "einhundertzwölf":"112",
-            },
             books: {
                 "1 mose":"01", "2 mose":"02", "3 mose":"03", "4 mose":"04", "5 mose":"05", "josua":"06", "richter":"07", "ruth":"08", "1 samuel":"09","2 samuel":"10", "1 könige":"11","2 könige":"12", "1 chronika":"13","2 chronika":"14", "esra":"15", "nehemia":"16", "esther":"17", "hiob":"18", "psalm":"19", "psalmen":"19", "sprüche":"20", "prediger":"21", "hohes lied":"22", "jesaja":"23", "jeremia":"24", "klagelieder":"25", "hesekiel":"26", "daniel":"27", "hosea":"28", "joel":"29", "amos":"30", "obadja":"31", "jona":"32", "micha":"33", "nahum":"34", "habakuk":"35", "zephanja":"36", "haggai":"37", "sacharja":"38", "maleachi":"39",
                 "matthäus":"40", "markus":"41", "lukas":"42", "apostelgeschichte":"44", "römer":"45", "1 korinther":"46","2 korinther":"47", "galater":"48", "epheser":"49", "philipper":"50", "kolosser":"51", "1 thessalonicher":"52","2 thessalonicher":"53", "1 timotheus":"54", "2 timotheus":"55", "titus":"56", "philemon":"57", "hebräer":"58", "jakobus":"59", "1 petrus":"60","2 petrus":"61", "1 johannes":"62","2 johannes":"63","3 johannes":"64","johannes":"43", "judas":"65", "offenbarung":"66"
@@ -240,8 +210,6 @@ const wordCorrections = {
         "en": {
             modelFile: 'model-en.zip',
             chapterWord: 'chapter', verseWord: 'verse',
-            fillWords: ["and", "to", "in", "the"],
-            numbers: { "one":"1", "two":"2", "three":"3", "four":"4", "five":"5" },
             books: { "genesis":"01", "exodus":"02", "psalms":"19", "matthew":"40", "john":"43", "revelation":"66" }
         }
     };
@@ -260,13 +228,10 @@ async function init() {
         }
     }
 
-    loadHistoryData(); // Lade gespeicherte Historie
+    loadHistoryData();
     await loadDatabaseAndModel();
 }
 
-/* =========================
-   HISTORY & PERSISTENZ
-========================= */
 function loadHistoryData() {
     const saved = localStorage.getItem('bibelHistoryApp');
     if (saved) {
@@ -283,44 +248,53 @@ function loadHistoryData() {
 function saveHistoryData() {
     let toSave = [];
     if (currentVerse) toSave.push(currentVerse);
-    toSave = toSave.concat(verseHistory).slice(0, 10); // Nur letzte 10 behalten
+    toSave = toSave.concat(verseHistory).slice(0, 10);
     localStorage.setItem('bibelHistoryApp', JSON.stringify(toSave));
 }
 
-// Wenn in der Historie auf einen Vers geklickt wird
 function loadFromHistory(index) {
     if (currentVerse) {
-        verseHistory.unshift(currentVerse); // Bisherigen aktuellen Vers in die History packen
+        verseHistory.unshift(currentVerse);
     }
-    currentVerse = verseHistory.splice(index, 1)[0]; // Angeklickten Vers aus History holen
+    currentVerse = verseHistory.splice(index, 1)[0];
 
     renderCurrentVerse();
     updateHistoryUI();
     saveHistoryData();
-    window.scrollTo({ top: 0, behavior: 'smooth' }); // Nach oben scrollen
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Render-Funktion für die History-Liste
 function updateHistoryUI() {
     const container = document.getElementById('history-container');
     if (!container) return;
-
     container.innerHTML = "";
 
     verseHistory.forEach((v, index) => {
         const div = document.createElement("div");
         div.className = "verse-history-item";
-        div.setAttribute("onclick", `loadFromHistory(${index})`); // Klickbar machen
-
-        div.innerHTML = `
-            <h4><span style="font-size:0.8em; opacity:0.6;">🕒 Verlauf:</span> ${v.title}</h4>
-            <p>${v.text}</p>
-        `;
+        div.setAttribute("onclick", `loadFromHistory(${index})`);
+        div.innerHTML = `<h4><span style="font-size:0.8em; opacity:0.6;">🕒 Verlauf:</span> ${v.title}</h4><p>${v.text}</p>`;
         container.appendChild(div);
     });
 }
 
-// Render-Funktion für den aktuell fokussierten Vers
+function deleteCurrentVerse() {
+    const el = document.getElementById('swipeable-verse');
+    if (el) {
+        el.style.transform = 'translateX(-100%)';
+        el.style.opacity = '0';
+        setTimeout(() => {
+            currentVerse = null;
+            renderCurrentVerse();
+            saveHistoryData();
+        }, 300);
+    } else {
+        currentVerse = null;
+        renderCurrentVerse();
+        saveHistoryData();
+    }
+}
+
 function renderCurrentVerse(showChapter = false) {
     const container = document.getElementById('current-verse-container');
     if (!currentVerse) {
@@ -329,20 +303,19 @@ function renderCurrentVerse(showChapter = false) {
     }
 
     let html = `<div class="verse-focus" id="swipeable-verse">`;
+    html += `<button class="close-btn" onclick="deleteCurrentVerse()" title="Vers schließen">✖</button>`;
     html += `<h2 style="color: #4caf50;">✔ ${currentVerse.title}</h2>`;
 
     if (showChapter && bibleData) {
         html += `<div class="chapter-scroll-container" id="chapter-container">`;
         const chapterData = bibleData[currentVerse.buchName][currentVerse.kapitel];
-
         for (let v in chapterData) {
             const isTarget = (v == currentVerse.vers);
             html += `<p class="${isTarget ? 'highlighted-verse' : 'context-verse'}" id="v-${v}">
                         <span class="vers-num">${v}</span>${chapterData[v]}
                      </p>`;
         }
-        html += `</div>`;
-        html += `<button class="btn-context" onclick="renderCurrentVerse(false)">🔙 Zurück zum Einzelvers</button>`;
+        html += `</div><button class="btn-context" onclick="renderCurrentVerse(false)">🔙 Zurück zum Einzelvers</button>`;
     } else {
         html += `<p class="verse-text-large">${currentVerse.text}</p>`;
         html += `<button class="btn-context" onclick="renderCurrentVerse(true)">📖 Ganzes Kapitel lesen</button>`;
@@ -351,92 +324,53 @@ function renderCurrentVerse(showChapter = false) {
     html += `</div>`;
     container.innerHTML = html;
 
-    // Auto-Scroll zum Vers in der Kapitelansicht
     if (showChapter) {
         setTimeout(() => {
             const targetEl = document.getElementById(`v-${currentVerse.vers}`);
             const scrollContainer = document.getElementById('chapter-container');
-            if (targetEl && scrollContainer) {
-                scrollContainer.scrollTop = targetEl.offsetTop - scrollContainer.offsetTop - 40;
-            }
+            if (targetEl && scrollContainer) scrollContainer.scrollTop = targetEl.offsetTop - scrollContainer.offsetTop - 40;
         }, 50);
     }
-
     setupSwipe();
 }
 
-// Swipe-to-Delete Logik
 function setupSwipe() {
     const el = document.getElementById('swipeable-verse');
     if (!el) return;
-
     let touchStartX = 0;
     let touchEndX = 0;
-
-    el.addEventListener('touchstart', e => {
-        touchStartX = e.changedTouches[0].screenX;
-    }, {passive: true});
-
+    el.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, {passive: true});
     el.addEventListener('touchend', e => {
         touchEndX = e.changedTouches[0].screenX;
-        handleSwipe();
+        if (touchStartX - touchEndX > 60) deleteCurrentVerse();
     }, {passive: true});
-
-    function handleSwipe() {
-        if (touchStartX - touchEndX > 60) {
-            el.style.transform = 'translateX(-100%)';
-            el.style.opacity = '0';
-            setTimeout(() => {
-                currentVerse = null; // Aktuellen Vers löschen
-                renderCurrentVerse();
-                saveHistoryData();
-            }, 300);
-        }
-    }
 }
 
-
-/* =========================
-   SYSTEM LADEN
-========================= */
 async function loadDatabaseAndModel() {
     const dot = document.getElementById('dot-status');
     const statusText = document.getElementById('system-status');
     const btn = document.getElementById('btn-listen');
 
-    // SICHERHEIT: Button sperren bis Modell GANZ sicher da ist.
     if (dot) dot.className = "status-dot";
     if (statusText) statusText.innerHTML = `<span class="status-dot"></span>System lädt...`;
     if (btn) btn.disabled = true;
-
-    console.log("--- DIAGNOSE START ---");
 
     const langConfig = languages[currentLang];
     try {
         const response = await fetch(langConfig.bibleFile);
         bibleData = await response.json();
-    } catch(e) {
-        console.error("Bibeldatei nicht ladbar", e);
-    }
+    } catch(e) { console.error("Bibeldatei nicht ladbar", e); }
 
     if(!bibleData) {
-        console.error("DIAGNOSE: Keine Bibeldaten gefunden!");
         statusText.innerHTML = `<span class="status-dot error"></span>Bibel fehlt!`;
         return;
     }
 
-    // UI initial aktualisieren falls wir schon Daten aus LocalStorage haben
     renderCurrentVerse();
     updateHistoryUI();
 
-    if (typeof Vosk === 'undefined') {
-        console.error("DIAGNOSE: vosk.js wurde nicht geladen!");
-        statusText.innerHTML = `<span class="status-dot error"></span>vosk.js fehlt!`;
-        return;
-    }
-    if (!window.SharedArrayBuffer) {
-        console.error("DIAGNOSE: SharedArrayBuffer BLOCKIERT!");
-        statusText.innerHTML = `<span class="status-dot error"></span>Sicherheitssperre im Browser!`;
+    if (typeof Vosk === 'undefined' || !window.SharedArrayBuffer) {
+        statusText.innerHTML = `<span class="status-dot error"></span>Ladefehler (SAB/Vosk)`;
         return;
     }
 
@@ -445,22 +379,13 @@ async function loadDatabaseAndModel() {
     try {
         const currentModelFile = languages[currentLang].modelFile;
         const modelUrl = new URL(currentModelFile, window.location.href).href;
-
-        // HIER WIRD GELADEN
         model = await Vosk.createModel(modelUrl);
-
-        console.log("DIAGNOSE: MODELL GELADEN!");
         dot.className = "status-dot ready";
         statusText.innerHTML = `<span class="status-dot ready"></span>Bereit zum Hören`;
-
-        // ERST JETZT darf der Button freigeschaltet werden!
         btn.disabled = false;
-
     } catch(e) {
-        console.error("DIAGNOSE FEHLER:", e.message);
         dot.className = "status-dot error";
         statusText.innerHTML = `<span class="status-dot error"></span>Ladefehler: ${e.message}`;
-        if (btn) btn.disabled = true;
     }
 }
 
@@ -471,10 +396,7 @@ async function changeLanguage() {
 }
 
 function openJwDownload() {
-    const links = {
-        "de": "https://www.jw.org/de/bibliothek/bibel/nwt/bibeluecher/",
-        "en": "https://www.jw.org/en/library/bible/nwt/books/"
-    };
+    const links = { "de": "https://www.jw.org/de/bibliothek/bibel/nwt/bibeluecher/", "en": "https://www.jw.org/en/library/bible/nwt/books/" };
     window.open(links[currentLang] || links["de"], '_blank');
 }
 
@@ -482,9 +404,7 @@ function saveBibelLocally(data) {
     return new Promise((res) => {
         const req = indexedDB.open(dbName, 1);
         req.onupgradeneeded = (e) => e.target.result.createObjectStore("bibelStore");
-        req.onsuccess = (e) => {
-            e.target.result.transaction("bibelStore", "readwrite").objectStore("bibelStore").put(data, "nwt_text").onsuccess = () => res(true);
-        };
+        req.onsuccess = (e) => { e.target.result.transaction("bibelStore", "readwrite").objectStore("bibelStore").put(data, "nwt_text").onsuccess = () => res(true); };
     });
 }
 
@@ -501,20 +421,14 @@ function loadBibelLocally() {
     });
 }
 
-function cleanText(text) {
-    return text.replace(/kapitel\s+\w+/g, "kapitel").replace(/vers\s+\w+/g, "vers");
-}
-
 async function importJwpub(file) {
     if (!file) return;
     const istat = document.getElementById('import-status');
     istat.innerHTML = "⏳ Verarbeite Datenbank...";
-
     try {
         const zip1 = await JSZip.loadAsync(file);
         const contentsFile = zip1.file("contents");
         let dbUint8;
-
         if (contentsFile) {
             const contentsBlob = await contentsFile.async("uint8array");
             const zip2 = await JSZip.loadAsync(contentsBlob);
@@ -528,50 +442,42 @@ async function importJwpub(file) {
 
         const SQL = await initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${f}` });
         const db = new SQL.Database(dbUint8);
-
         const res = db.exec("SELECT BibleVerseId, Content FROM BibleVerse");
         if (!res || res.length === 0) throw new Error("Keine Daten in BibleVerse gefunden.");
 
         const json = {};
         res[0].values.forEach(r => {
-            const idValue = r[0];
-            const contentValue = r[1];
-            if (idValue && contentValue && typeof contentValue === 'string') {
-                const id = String(idValue).padStart(9, '0');
+            if (r[0] && r[1] && typeof r[1] === 'string') {
+                const id = String(r[0]).padStart(9, '0');
                 const bookNum = id.substring(0, 3).slice(-2);
                 const chapNum = parseInt(id.substring(3, 6)).toString();
                 const versNum = parseInt(id.substring(6, 9)).toString();
-
                 if(!json[bookNum]) json[bookNum] = {};
                 if(!json[bookNum][chapNum]) json[bookNum][chapNum] = {};
-
-                let cleanText = contentValue.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-                json[bookNum][chapNum][versNum] = cleanText;
+                json[bookNum][chapNum][versNum] = r[1].replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
             }
         });
 
         await saveBibelLocally(json);
         bibleData = json;
-
         istat.innerHTML = `✅ Erfolg! Bibel geladen.`;
         await loadDatabaseAndModel();
         setTimeout(() => showTab('listen'), 1000);
-
-    } catch(e) {
-        console.error("Fehler beim Import:", e);
-        istat.innerHTML = "❌ Fehler: " + e.message;
-    }
+    } catch(e) { istat.innerHTML = "❌ Fehler: " + e.message; }
 }
 
 function normalizeText(text) { return text.toLowerCase(); }
 
 function verarbeiteText(text) {
     if (!text || text.length === 0) return;
-    document.getElementById('live-text').innerText = text;
+    document.getElementById('live-text').innerText = text; // Direkt in UI schreiben
 
     let normalized = normalizeText(text);
     normalized = normalizeNumbers(normalized);
+    console.log("NORMALIZED:", normalized);
+
     const ref = extractReference(normalized);
+    console.log("GEFUNDEN:", ref);
 
     if (ref && ref.book && ref.chapter && ref.verse) {
         zeigeVersAn(ref.book, ref.chapter, ref.verse);
@@ -605,7 +511,6 @@ function applyWordCorrectionsToWords(words, wordCorrections) {
 }
 
   async function toggleListen() {
-    // SICHERHEITS-CHECK: Ist das Modell wirklich da?
     if (!model) {
         alert("Das Sprachmodell wird noch geladen. Bitte warte einen kleinen Moment!");
         return;
@@ -615,58 +520,67 @@ function applyWordCorrectionsToWords(words, wordCorrections) {
 
     if (isListening) {
         isListening = false;
-        btn.innerText = "Zuhören starten";
+        btn.innerText = "🎙️ Zuhören starten";
         if (processor) processor.disconnect();
         if (source) source.disconnect();
+        document.getElementById('live-text').innerText = "Warte auf Sprache...";
         return;
     }
 
     try {
-        if (!audioContext) {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-        }
+        if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
         if (audioContext.state === 'suspended') await audioContext.resume();
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-            audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true }
-        });
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true } });
 
-      if (!recognizer) {
-        fetch("data/de/de_vokabular.json")
-          .then(response => response.json())
-          .then(json => {
-            alleWoerter = Object.values(json).flat();
-            const bookNames = Object.keys(bibleData);
-            let wordsFromBooks = [];
-            bookNames.forEach(book => {
-                const parts = book.toLowerCase().replace(/\./g, '').split(' ');
-                wordsFromBooks.push(...parts);
-            });
+        // WICHTIG: Komplett Awaiten, BEVOR das Mikrofon streamt!
+        if (!recognizer) {
+            try {
+                const response = await fetch("data/de/de_vokabular.json");
+                const json = await response.json();
+                alleWoerter = Object.values(json).flat();
 
-            const keywords = ["kapitel", "vers", "und","lesen", "aufschlagen","öffnen", "bis","buch","bibel","wir","bitte","gemeinsam"];
-            const cleanGrammar = [...wordsFromBooks, ...numberKeys, ...keywords, ...alleWoerter].map(w => w.replace(".", ""));
-            cleanGrammar.push("[unk]");
+                const bookNames = Object.keys(bibleData);
+                let wordsFromBooks = [];
+                bookNames.forEach(book => {
+                    const parts = book.toLowerCase().replace(/\./g, '').split(' ');
+                    wordsFromBooks.push(...parts);
+                });
 
-            for (const variants of Object.values(wordCorrections)) {
-                cleanGrammar.push(...variants);
+                const keywords = ["kapitel", "vers", "und","lesen", "aufschlagen","öffnen", "bis","buch","bibel","wir","bitte","gemeinsam"];
+                const cleanGrammar = [...wordsFromBooks, ...numberKeys, ...keywords, ...alleWoerter].map(w => w.replace(".", ""));
+                cleanGrammar.push("[unk]");
+
+                for (const variants of Object.values(wordCorrections)) cleanGrammar.push(...variants);
+
+                recognizer = new model.KaldiRecognizer(16000, JSON.stringify(cleanGrammar));
+                recognizer.setWords(true);
+
+                // Partial Result für "Live-Vorschau" (damit es sich flüssig anfühlt)
+                recognizer.on("partialresult", (msg) => {
+                    const partialText = msg.result?.partial || "";
+                    if (partialText) document.getElementById('live-text').innerText = partialText + "...";
+                });
+
+                recognizer.on("result", (msg) => {
+                    const data = msg.result;
+                    if (!data.result || data.result.length === 0) return;
+
+                    let words = data.result || [];
+                    words = applyWordCorrectionsToWords(words, wordCorrections);
+
+                    console.log("Volltext:", data.text);
+                    words.forEach((wort, index) => console.log(`Wort ${index + 1}: "${wort.word}" | Conf: ${wort.conf.toFixed(3)}`));
+
+                    const guteWoerter = words.filter(w => w.conf >= 0.8);
+                    const filteredText = guteWoerter.map(w => w.word).join(' ');
+
+                    verarbeiteText(filteredText);
+                });
+            } catch (err) {
+                console.error("Fehler beim Laden des Vokabulars", err);
+                return;
             }
-
-            // Da 'model' jetzt sicher existiert, knallt es hier nicht mehr.
-            recognizer = new model.KaldiRecognizer(16000, JSON.stringify(cleanGrammar));
-            recognizer.setWords(true);
-
-            recognizer.on("result", (msg) => {
-                const data = msg.result;
-                if (!data.result || data.result.length === 0) return;
-
-                let words = data.result || [];
-                words = applyWordCorrectionsToWords(words, wordCorrections);
-                const guteWoerter = words.filter(w => w.conf >= 0.8);
-                const filteredText = guteWoerter.map(w => w.word).join(' ');
-
-                verarbeiteText(filteredText);
-            })
-          }).catch(error => console.error("Fehler beim Laden des Vokabulars:", error));
         }
 
         source = audioContext.createMediaStreamSource(stream);
@@ -681,11 +595,10 @@ function applyWordCorrectionsToWords(words, wordCorrections) {
         processor.connect(audioContext.destination);
 
         isListening = true;
-        btn.innerText = "Zuhören stoppen...";
+        btn.innerText = "🛑 Zuhören stoppen...";
+        document.getElementById('live-text').innerText = "Ich höre zu...";
 
-    } catch (err) {
-        alert("Fehler bei Mikrofonzugriff: " + err.message);
-    }
+    } catch (err) { alert("Fehler bei Mikrofonzugriff: " + err.message); }
 }
 
 function extractReference(text) {
@@ -750,7 +663,6 @@ function extractReference(text) {
     return { book: bestBook.name, chapter: chapter, verse: verse };
 }
 
-// --- ANGEPASSTE ANZEIGE ---
 function zeigeVersAn(buchName, kapitel, vers) {
     if (!bibleData || !bibleData[buchName] || !bibleData[buchName][kapitel] || !bibleData[buchName][kapitel][vers]) return;
 
@@ -764,13 +676,7 @@ function zeigeVersAn(buchName, kapitel, vers) {
         verseHistory.unshift(currentVerse);
     }
 
-    currentVerse = {
-        buchName: buchName,
-        kapitel: kapitel,
-        vers: vers,
-        title: newTitle,
-        text: verseText
-    };
+    currentVerse = { buchName: buchName, kapitel: kapitel, vers: vers, title: newTitle, text: verseText };
 
     if (navigator.vibrate) navigator.vibrate(50);
 
@@ -789,9 +695,7 @@ function showTab(tab) {
 function checkPassword() {
     const input = document.getElementById('pw-input').value;
     const errorMsg = document.getElementById('pw-error');
-    const geheimnis = "1914";
-
-    if (input === geheimnis) {
+    if (input === "1914") {
         document.getElementById('password-overlay').style.display = 'none';
         document.getElementById('app-content').style.display = 'block';
     } else {
@@ -800,9 +704,7 @@ function checkPassword() {
     }
 }
 
-document.getElementById('pw-input')?.addEventListener('keypress', function (e) {
-    if (e.key === 'Enter') checkPassword();
-});
+document.getElementById('pw-input')?.addEventListener('keypress', function (e) { if (e.key === 'Enter') checkPassword(); });
 
 window.onload = init;
 </script>
