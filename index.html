@@ -133,6 +133,7 @@
 </div>
 
 <script>
+
     let model, recognizer, audioContext;
     let verseHistory = [];
     let isListening = false;
@@ -141,7 +142,76 @@
     let currentLang = 'de';
     let alleWoerter = [];
 
+ let numberMap = {};
+let numberKeys = [];
 
+/* =========================
+   1. ZAHLEN LADEN
+========================= */
+fetch("./data/de/zahlen.json")
+    .then(r => r.json())
+    .then(json => {
+        numberMap = json;
+
+        numberKeys = Object.keys(numberMap)
+            .sort((a, b) => b.length - a.length);
+
+        console.log("✅ Zahlen geladen:", numberKeys.length);
+    });
+
+/* =========================
+   2. ZAHLEN NORMALISIEREN
+========================= */
+function normalizeNumbers(text) {
+
+    if (!numberMap || Object.keys(numberMap).length === 0) {
+        return text;
+    }
+
+    let t = text.toLowerCase();
+
+    for (const word of numberKeys) {
+
+        const value = numberMap[word];
+
+        const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+        t = t.replace(new RegExp(escaped, "g"), value);
+    }
+
+    return t;
+}
+
+/* =========================
+   3. SPEECH PIPELINE
+========================= */
+function processSpeech(text) {
+
+    if (!text) return "";
+
+    let t = text.toLowerCase();
+
+    // optional: "und" entfernen für bessere Zahlenerkennung
+    t = t.replace(/ und /g, "");
+
+    // Zahlen umwandeln
+    t = normalizeNumbers(t);
+
+    return t;
+}
+
+/* =========================
+   4. VOSK OUTPUT HANDLER (BEISPIEL)
+========================= */
+function handleVoskResult(resultText) {
+
+    const normalized = processSpeech(resultText);
+
+    console.log("RAW:", resultText);
+    console.log("FINAL:", normalized);
+
+    return normalized;
+}
 const wordCorrections = {
     "amos": ["arm los"],
     "obadja": ["opa ja"],
@@ -454,22 +524,27 @@ async function importJwpub(file) {
 }
 
 
-
 function normalizeNumbers(text) {
-    const map = languages[currentLang].numbers;
 
-    // Wir sortieren die Wörter nach Länge (Absteigend),
-    // damit "siebzehn" vor "sieben" geprüft wird.
-    const sortedWords = Object.keys(map).sort((a, b) => b.length - a.length);
+    let normalized = text.toLowerCase();
+
+    // längste zuerst (wichtig!)
+    const sortedWords = Object.keys(numberMap)
+        .sort((a, b) => b.length - a.length);
 
     for (const word of sortedWords) {
-        // Wir entfernen \b, falls Vosk "einundzwanzig" ohne Leerzeichen schreibt
-        const regex = new RegExp(word, "g");
-        text = text.replace(regex, map[word]);
+
+        const value = numberMap[word];
+
+        const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(escaped, "g");
+
+        normalized = normalized.replace(regex, value);
     }
 
-    return text;
+    return normalized;
 }
+
 
 // Ergänzung für dein numbers-Objekt:
 const germanNumbers = {
@@ -633,17 +708,18 @@ bookNames.forEach(book => {
         const keywords = ["kapitel", "vers", "und","lesen", "aufschlagen","öffnen", "bis","buch","bibel","wir","bitte","gemeinsam"];
 
         // Vosk mag keine Satzzeichen in der Grammatik-Liste (Punkt bei 1. Mose entfernen für die Erkennung)
-        const cleanGrammar = [...wordsFromBooks, ...zahlenWoerter, ...keywords, ...alleWoerter].map(w => w.replace(".", ""));
+        const cleanGrammar = [...wordsFromBooks, ...numberKeys, ...keywords, ...alleWoerter].map(w => w.replace(".", ""));
         cleanGrammar.push("[unk]");
 
         for (const variants of Object.values(wordCorrections)) {
     cleanGrammar.push(...variants);
 }
+console.log("numberKeys");
 // Alles kombinieren
 //const grammar = JSON.stringify([
  //   ...buecher,
   //  ...zahlenReihe,
-  //  ...zahlenWoerter,
+  //  ...numberKeys,
   //  "kapitel", "vers", "und"
 //]);
 
